@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::post('/auth-user', [AuthenticatedSessionController::class, 'authenticateUserToken'])->middleware('auth_api');
+Route::post('/auth-user', [AuthenticatedSessionController::class, 'authenticateUserToken'])->middleware(['auth:sanctum', 'ability:admin']);
 
 Route::post('/register', [RegisteredUserController::class, 'store'])
     ->middleware('guest')
@@ -52,30 +52,20 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');
 
 
-//Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-//    return $request->user();
-//});
 
-//Route::middleware('auth:sanctum')->group(function ()
-//{
-//    Route::controller(TradingUnitsController::class)->group(function()
-//    {
-//        Route::post('/trading-unit', 'store')->name('trading-unit.create');
-//        Route::get('/trading-units', 'getTradingUnits')->name('trading-units');
-//    });
-//});
-
-//Route::post('/auth-user', [AuthenticatedSessionController::class, 'authenticateUserToken'])->middleware('auth_api');
-//
-//Route::post('/register', [RegisteredUserController::class, 'store']);
-//Route::post('/login', [AuthenticatedSessionController::class, 'store']);
-//Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
-//    ->middleware('auth:sanctum');
-
-
-Route::middleware('auth:sanctum')->controller(TradingUnitsController::class)->group(function ()
+Route::middleware(['auth:sanctum', 'ability:admin'])->controller(TradingUnitsController::class)->group(function ()
 {
     Route::post('/trading-unit', 'store');
     Route::post('/trading-unit/{id}', 'update');
     Route::get('/trading-units', 'getTradingUnits');
+    Route::delete('trading-unit/{id}', 'destroy');
+
+    Route::post('/trading-units/settings/set-password', 'setPassword');
+    Route::post('/trading-units/settings/update-password', 'updatePassword');
+    Route::get('/trading-unit/settings', 'getSettings');
+});
+
+Route::middleware(['auth:sanctum', 'ability:unit'])->group(function()
+{
+    Route::post('test-broadcast', [TradingUnitsController::class, 'testBroadcastConnection']);
 });

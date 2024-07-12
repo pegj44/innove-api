@@ -13,7 +13,9 @@ class TradingUnitsModel extends Model
 
     protected $table = 'trading_units';
     protected $fillable = [
+        'user_id',
         'name',
-        'ip_address'
+        'ip_address',
+        'status'
     ];
 }

@@ -71,7 +71,8 @@ class Kernel extends HttpKernel
 
     protected $routeMiddleware = [
         'auth.basic2' => \App\Http\Middleware\AuthenticateWithBasicAuth::class,
-        'auth_api' => CustomSanctumAuth::class
+        'auth_api' => CustomSanctumAuth::class,
+        'ability' => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class
     ];
 
 

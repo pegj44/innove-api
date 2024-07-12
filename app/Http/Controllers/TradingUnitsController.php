@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\UnitsRequestReceived;
 use App\Models\TradingUnitsModel;
+use App\Models\User;
+use App\Models\UserUnitLogin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -34,6 +38,9 @@ class TradingUnitsController extends Controller
                         return $query->where('user_id', $userId);
                     })
                 ]
+            ], [
+                'name.unique' => __('The unit name already exist.'),
+                'ip_address.unique' => __('The ip address is already added.')
             ]);
 
             if ($validator->fails()) {
@@ -45,9 +52,8 @@ class TradingUnitsController extends Controller
             $unit = new TradingUnitsModel();
 
             $unit->user_id = $userId;
-            $unit->name = $request->get('name');
-            $unit->ip_address = $request->get('ip_address');
-            $unit->status = $request->get('status');
+
+            $unit->fill($request->only(['name', 'ip_address', 'status']));
 
             $unitSaved = $unit->save();
 
@@ -56,11 +62,6 @@ class TradingUnitsController extends Controller
                     'errors' => __('Unable to create the trading unit.')
                 ]);
             }
-
-            $user = Auth::user();
-            $tokenName = $unit->ip_address .'_unit';
-
-            $user->createToken($tokenName, ['unit'])->plainTextToken;
 
             return response()->json([
                 'unit_id' => $unit->id
@@ -75,25 +76,148 @@ class TradingUnitsController extends Controller
 
     public function getTradingUnits()
     {
-        $units = TradingUnitsModel::where('user_id', auth()->id())->get();
+        $units = TradingUnitsModel::where('user_id', auth()->id())
+            ->get()
+            ->keyBy('id')
+            ->map(function($item) {
+                return collect($item)->except('user_id');
+            })
+            ->toArray();
 
         return response()->json($units);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    public function updatePassword(Request $request)
     {
+        try {
+            $currentUserId = auth()->id();
+            $unitLogin = $this->getLoginDetails();
 
+            if (empty($unitLogin)) {
+                return response()->json(['errors' => __('Error updating the unit login')]);
+            }
+
+            $validationArgs = [
+                'username' => [
+                    'required',
+                    'regex:/^[a-zA-Z0-9-_]+$/',
+                    Rule::unique('users', 'email')->ignore($currentUserId),
+                ]
+            ];
+
+            $pwData = array_filter($request->only(['password', 'password_confirmation']));
+            $data = ['username' => $request->get('username')];
+
+            if (!empty($pwData)) {
+                $data = array_merge($data, $pwData);
+                $validationArgs['password'] = [
+                    'required',
+                    'confirmed',
+                    'min:6'
+                ];
+            }
+
+            $validator = Validator::make($data, $validationArgs);
+
+            if ($validator->fails()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+
+            $unitLogin->name = $request->get('username');
+            $unitLogin->email = $data['username'] .'-'. $currentUserId .'@innovetechsolutions.rpahandler';
+            $unitLogin->password = Hash::make($request->get('password'));
+            $isUpdated = $unitLogin->update();
+
+            if (!$isUpdated) {
+                return response()->json(['errors' => __('Error updating the unit login')]);
+            }
+
+            return response()->json(['message' => __('Successfully updated unit login')]);
+
+        } catch (\Exception $e) {
+            info(print_r([
+                'updateUnitPwError' => $e->getMessage()
+            ], true));
+            return response()->json([
+                'errors' => __('Failed to update unit login.')
+            ]);
+        }
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
+    public function setPassword(Request $request)
     {
-        //
+        try {
+            $currentUserId = auth()->id();
+            $data = $request->only(['username', 'password', 'password_confirmation']);
+            $email = $request->get('username') .'-'. $currentUserId .'@innovetechsolutions.rpahandler';
+            $data['email'] = $email;
+
+            $validator = Validator::make($data, [
+                'username' => [
+                    'required',
+                    'regex:/^[a-zA-Z0-9-_]+$/',
+                    Rule::unique('users', 'email')->ignore($currentUserId),
+                ],
+                'password' => [
+                    'required',
+                    'confirmed',
+                    'min:6'
+                ],
+            ], [
+                'username.regex' => __('The username must not contain special characters. Only "-" and "_" are allowed.'),
+                'password.min' => __('Password should be at least 6 characters long.')
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+
+            $user = User::create([
+                'name' => $request->get('username'),
+                'email' => $email,
+                'password' => Hash::make($request->get('password')),
+            ]);
+
+            if (!$user) {
+                return response()->json([
+                    'error' => __('Failed to set unit login.')
+                ]);
+            }
+
+            $user->createToken('innove-unit-api', ['unit'])->plainTextToken;
+
+            UserUnitLogin::create([
+                'user_id' => $currentUserId,
+                'unit_user_id' => $user->id
+            ]);
+
+            return response()->json([
+                'message' => __('Successfully saved unit login.')
+            ]);
+        } catch (\Exception $e) {
+            info(print_r([
+                'setUnitPwError' => $e->getMessage()
+            ], true));
+            return response()->json([
+                'errors' => __('Failed to set unit login.')
+            ]);
+        }
+    }
+
+    public function getSettings()
+    {
+        return [
+            'login' => $this->getLoginDetails()
+        ];
+    }
+
+    public function getLoginDetails()
+    {
+        $userId = Auth::id();
+
+        return User::whereHas('unitUserLogins', function ($query) use ($userId) {
+            $query->where('user_id', $userId);
+        })->first();
     }
 
     /**
@@ -110,11 +234,8 @@ class TradingUnitsController extends Controller
                 ]);
             }
 
-            $unit->name = $request->get('name');
-            $unit->ip_address = $request->get('ip_address');
-            $unit->status = $request->get('status');
-
-            $unitSaved = $unit->save();
+            $unit->fill($request->only(['name', 'ip_address', 'status']));
+            $unitSaved = $unit->update();
 
             if (!$unitSaved) {
                 return response()->json([
@@ -122,9 +243,7 @@ class TradingUnitsController extends Controller
                 ]);
             }
 
-            return response()->json([
-                'message' => __('Success')
-            ]);
+            return response()->json($this->getTradingUnits());
         } catch (\Exception $e) {
             return response()->json([
                 'errors' => __('Failed to save the trading unit.')
@@ -137,6 +256,23 @@ class TradingUnitsController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $unit = TradingUnitsModel::find($id);
+
+        if (!$unit) {
+            return response()->json([
+               'errors' => __('Unit does not exists.')
+            ]);
+        }
+
+        $unit->delete();
+
+        return response()->json([
+           'message' => __('Successfully deleted unit.')
+        ]);
+    }
+
+    public function testBroadcastConnection(Request $request)
+    {
+        event(new UnitsRequestReceived($request->get('message')));
     }
 }
