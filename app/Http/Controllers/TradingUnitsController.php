@@ -100,7 +100,7 @@ class TradingUnitsController extends Controller
             $validationArgs = [
                 'username' => [
                     'required',
-                    'regex:/^[a-zA-Z0-9-_]+$/',
+                    'regex:/^[a-zA-Z0-9-_ ]+$/',
                     Rule::unique('users', 'email')->ignore($currentUserId),
                 ]
             ];
