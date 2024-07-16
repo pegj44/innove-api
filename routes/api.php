@@ -7,8 +7,10 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\FunderController;
-use App\Http\Controllers\TradingIndividuals;
+use App\Http\Controllers\TradingAccountsController;
+use App\Http\Controllers\TradingIndividualsController;
 use App\Http\Controllers\TradingUnitsController;
+use App\Http\Controllers\UserEntityController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -55,6 +57,8 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
 
 Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 {
+    Route::get('user/entities', [UserEntityController::class, 'getUserEntities']);
+
     Route::controller(TradingUnitsController::class)->group(function()
     {
         Route::post('/trading-unit', 'store');
@@ -76,10 +80,21 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
         Route::delete('funder/{id}', 'destroy');
     });
 
-    Route::controller(TradingIndividuals::class)->group(function()
+    Route::controller(TradingIndividualsController::class)->group(function()
     {
+        Route::get('trading-individuals', 'getTradingIndividuals');
         Route::post('trading-individual', 'store');
+        Route::get('trading-individual/{id}', 'edit');
+        Route::post('trading-individual/{id}', 'update');
+        Route::delete('trading-individual/{id}', 'destroy');
     });
+
+//    Route::controller(TradingAccountsController::class)->group(function()
+//    {
+//        Route::get('trading-accounts', 'getTradingAccounts');
+//    });
+
+
 });
 
 Route::middleware(['auth:sanctum', 'ability:unit'])->group(function()

@@ -92,7 +92,7 @@ class FunderController extends Controller
                 $fundersMetaArr[] = [
                     'funder_id' => $funder->id,
                     'key' => strip_tags($key),
-                    'value' => strip_tags($value)
+                    'value' => (!empty($value))? strip_tags($value) : ''
                 ];
             }
 
@@ -160,21 +160,11 @@ class FunderController extends Controller
                 $data[] = [
                     'funder_id' => $id,
                     'key' => strip_tags($key),
-                    'value' => strip_tags($value)
+                    'value' => (!empty($value))? strip_tags($value) : ''
                 ];
             }
 
-            $values = [];
-            foreach ($data as $item) {
-                $values[] = "({$item['funder_id']}, '{$item['key']}', '{$item['value']}')";
-            }
-
-            $valuesList = implode(', ', $values);
-
-            $query = "INSERT INTO `funders_metadata` (`funder_id`, `key`, `value`) VALUES $valuesList
-            ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)";
-
-            $success = DB::statement($query);
+            $success = FundersMetadata::upsert($data, uniqueBy: ['funder_id', 'key'], update: ['value']);
 
             if (!$success) {
                 return response()->json(['errors' => __('Failed to update the funder info.')]);

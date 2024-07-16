@@ -14,4 +14,9 @@ class TradingIndividualMetadata extends Model
         'key',
         'value'
     ];
+
+    public function tradingIndividuals()
+    {
+        return $this->belongsTo(TradingIndividual::class, 'trading_individual_id');
+    }
 }

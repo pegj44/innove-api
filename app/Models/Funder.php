@@ -13,6 +13,11 @@ class Funder extends Model
         'user_id'
     ];
 
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'id');
+    }
+
     public function metadata()
     {
         return $this->hasMany(FundersMetadata::class);

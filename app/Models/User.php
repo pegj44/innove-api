@@ -52,4 +52,19 @@ class User extends Authenticatable
     {
         return $this->hasMany(UserUnitLogin::class, 'unit_user_id');
     }
+
+    public function tradingIndividuals()
+    {
+        return $this->hasMany(TradingIndividual::class, 'user_id');
+    }
+
+    public function funders()
+    {
+        return $this->hasMany(Funder::class, 'user_id');
+    }
+
+    public function tradingCredentials()
+    {
+        return [];
+    }
 }

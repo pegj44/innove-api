@@ -18,4 +18,9 @@ class TradingUnitsModel extends Model
         'ip_address',
         'status'
     ];
+
+    public function individuals()
+    {
+        $this->hasMany(TradingIndividual::class, 'trading_unit_id');
+    }
 }
