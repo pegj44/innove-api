@@ -23,8 +23,18 @@ class UserEntityController extends Controller
                 return response()->json([]);
             }
 
-//            $data = User::with($withData)->where('id', auth()->id())->first();
+            $data = User::with($withData)->where('id', auth()->id())->first();
 
+            return response()->json($data);
+
+        } catch (\Exception $e) {
+            return response()->json([]);
+        }
+    }
+
+    public function getUserIndividualsAndFunders()
+    {
+        try {
             $data = User::with([
                 'tradingIndividuals' => function ($query) {
                     $query->with(['metadata' => function ($query) {
