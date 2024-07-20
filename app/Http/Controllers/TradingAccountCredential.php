@@ -11,9 +11,13 @@ class TradingAccountCredential extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function getCredentials()
     {
-        //
+        $credentials = TradingAccountCredentialModel::with(['funder.metadata', 'tradingIndividual.metadata'])
+            ->where('user_id', auth()->id())
+            ->get();
+
+        return response()->json($credentials);
     }
 
     /**
@@ -33,33 +37,14 @@ class TradingAccountCredential extends Controller
 
             $data = array_filter($request->except('_token'));
 
-            $inputsToValidate = [
-                'trading_individual_id' => ['required', 'numeric'],
-                'funder_id' => ['required', 'numeric'],
-            ];
-
-            if (array_intersect(array_keys($data), ['dashboard_login_url', 'dashboard_login_username', 'dashboard_login_password'])) {
-                $inputsToValidate['dashboard_login_url'] = ['required', 'url'];
-                $inputsToValidate['dashboard_login_username'] = ['required',];
-                $inputsToValidate['dashboard_login_password'] = ['required'];
-            }
-
-            if (array_intersect(array_keys($data), ['platform_login_url', 'platform_login_username', 'platform_login_password'])) {
-                $inputsToValidate['platform_login_url'] = ['required', 'url'];
-                $inputsToValidate['platform_login_username'] = ['required'];
-                $inputsToValidate['platform_login_password'] = ['required'];
-            }
-
-            $validator = Validator::make($data, $inputsToValidate);
+            $validator = $this->validateUserInput($data);
 
             if ($validator->fails()) {
                 return response()->json(['errors' => $validator->errors()], 422);
             }
 
             $data['user_id'] = auth()->id();
-            $data['status'] = '';
 
-//            return response()->json($data);
             $credential = TradingAccountCredentialModel::create($data);
 
             if (!$credential) {
@@ -77,12 +62,29 @@ class TradingAccountCredential extends Controller
         }
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    private function validateUserInput($data)
     {
-        //
+        $inputsToValidate = [
+            'trading_individual_id' => ['required', 'numeric'],
+            'funder_id' => ['required', 'numeric'],
+            'account_id' => ['required'],
+            'phase' => ['required'],
+            'status' => ['required']
+        ];
+
+        if (array_intersect(array_keys($data), ['dashboard_login_url', 'dashboard_login_username', 'dashboard_login_password'])) {
+            $inputsToValidate['dashboard_login_url'] = ['required', 'url'];
+            $inputsToValidate['dashboard_login_username'] = ['required',];
+            $inputsToValidate['dashboard_login_password'] = ['required'];
+        }
+
+        if (array_intersect(array_keys($data), ['platform_login_url', 'platform_login_username', 'platform_login_password'])) {
+            $inputsToValidate['platform_login_url'] = ['required', 'url'];
+            $inputsToValidate['platform_login_username'] = ['required'];
+            $inputsToValidate['platform_login_password'] = ['required'];
+        }
+
+        return Validator::make($data, $inputsToValidate);
     }
 
     /**
@@ -90,7 +92,19 @@ class TradingAccountCredential extends Controller
      */
     public function edit(string $id)
     {
-        //
+        try {
+            $credentials = TradingAccountCredentialModel::with(['funder.metadata', 'tradingIndividual.metadata'])
+                ->where('id', $id)
+                ->where('user_id', auth()->id())
+                ->first();
+
+            return response()->json($credentials);
+        } catch (\Exception $e) {
+            info(print_r([
+                'errorEditCredential' => $e->getMessage()
+            ], true));
+            return response()->json(['errors' => __('Error retrieving data.')]);
+        }
     }
 
     /**
@@ -98,7 +112,33 @@ class TradingAccountCredential extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        try {
+            $data = array_filter($request->except('_token'));
+
+            $validator = $this->validateUserInput($data);
+
+            if ($validator->fails()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+
+            $item = TradingAccountCredentialModel::where('id', $id)->where('user_id', auth()->id())->first();
+
+            if (!$item) {
+                return response()->json(['errors' => __('Unable to find credential record.')]);
+            }
+
+            $item->fill($data);
+            $update = $item->update();
+
+            if (!$update) {
+                return response()->json(['errors' => __('Failed to update credential.')]);
+            }
+
+            return response()->json(['message' => __('Successfully updated credential.')]);
+        } catch (\Exception $e) {
+
+            return response()->json(['errors' => __('Error updating credential.')]);
+        }
     }
 
     /**
@@ -106,6 +146,24 @@ class TradingAccountCredential extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        try {
+            $item = TradingAccountCredentialModel::where('id', $id)->where('user_id', auth()->id())->first();
+
+            if (!$item) {
+                return response()->json(['errors' => 'Failed to remove item.']);
+            }
+
+            $item->delete();
+
+            return response()->json([
+                'message' => __('Successfully removed item.')
+            ]);
+        } catch (\Exception $e) {
+            info(print_r([
+                'errorRemoveCredential' => $e->getMessage()
+            ], true));
+
+            return response()->json(['errors' => 'Error deleting the item.']);
+        }
     }
 }

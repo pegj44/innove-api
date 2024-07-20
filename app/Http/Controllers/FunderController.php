@@ -187,7 +187,7 @@ class FunderController extends Controller
     public function destroy(string $id)
     {
         try {
-            $funder = Funder::find($id);
+            $funder = Funder::where('id', $id)->where('user_id', auth()->id())->first();
 
             if (!$funder) {
                 return response()->json(['errors' => 'Failed to remove Funder.']);

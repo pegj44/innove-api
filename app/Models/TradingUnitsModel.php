@@ -19,8 +19,18 @@ class TradingUnitsModel extends Model
         'status'
     ];
 
+    public function user()
+    {
+        $this->belongsTo(User::class);
+    }
+
     public function individuals()
     {
         $this->hasMany(TradingIndividual::class, 'trading_unit_id');
+    }
+
+    public function tradeReports()
+    {
+        $this->hasMany(TradeReport::class);
     }
 }

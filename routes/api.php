@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\FunderController;
+use App\Http\Controllers\TradeReportController;
 use App\Http\Controllers\TradingAccountCredential;
 use App\Http\Controllers\TradingIndividualsController;
 use App\Http\Controllers\TradingUnitsController;
@@ -92,7 +93,23 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 
     Route::controller(TradingAccountCredential::class)->group(function()
     {
+        Route::get('credentials', 'getCredentials');
         Route::post('credential', 'store');
+        Route::delete('credential/{id}', 'destroy');
+        Route::get('credential/{id}', 'edit');
+        Route::post('credential/{id}', 'update');
+    });
+});
+
+Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
+{
+    Route::controller(TradeReportController::class)->group(function()
+    {
+        Route::get('trade/reports', 'getReports');
+        Route::post('trade/report', 'store');
+        Route::get('trade/report/{id}', 'edit');
+        Route::post('trade/report/{id}', 'update');
+        Route::delete('trade/report/{id}', 'destroy');
     });
 });
 

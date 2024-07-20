@@ -226,7 +226,7 @@ class TradingUnitsController extends Controller
     public function update(Request $request, string $id)
     {
         try {
-            $unit = TradingUnitsModel::find($id);
+            $unit = TradingUnitsModel::where('id', $id)->where('user_id', auth()->id())->first();
 
             if (!$unit) {
                 return response()->json([
@@ -256,7 +256,7 @@ class TradingUnitsController extends Controller
      */
     public function destroy(string $id)
     {
-        $unit = TradingUnitsModel::find($id);
+        $unit = TradingUnitsModel::where('id', $id)->where('user_id', auth()->id())->first();
 
         if (!$unit) {
             return response()->json([

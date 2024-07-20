@@ -19,13 +19,14 @@ return new class extends Migration
             $table->foreign('trading_individual_id')->references('id')->on('trading_individuals')->onDelete('cascade');
             $table->unsignedBigInteger('funder_id');
             $table->foreign('funder_id')->references('id')->on('funders')->onDelete('cascade');
-            $table->string('dashboard_login_url');
-            $table->string('dashboard_login_username');
-            $table->string('dashboard_login_password');
-            $table->string('platform_login_url');
-            $table->string('platform_login_username');
-            $table->string('platform_login_password');
-            $table->string('status');
+            $table->string('account_id');
+            $table->string('dashboard_login_url')->nullable();
+            $table->string('dashboard_login_username')->nullable();
+            $table->string('dashboard_login_password')->nullable();
+            $table->string('platform_login_url')->nullable();
+            $table->string('platform_login_username')->nullable();
+            $table->string('platform_login_password')->nullable();
+            $table->string('status')->nullable();
             $table->timestamps();
         });
     }

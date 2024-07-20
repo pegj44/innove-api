@@ -28,4 +28,9 @@ class TradingIndividual extends Model
     {
         return $this->hasMany(TradingIndividualMetadata::class);
     }
+
+    public function credentials()
+    {
+        return $this->hasMany(TradingAccountCredential::class, 'individual_id');
+    }
 }

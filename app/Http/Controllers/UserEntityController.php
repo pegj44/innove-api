@@ -11,7 +11,9 @@ class UserEntityController extends Controller
         'tradingIndividuals',
         'tradingIndividuals.metadata',
         'funders',
-        'funders.metadata'
+        'funders.metadata',
+        'accountCredentials',
+        'units',
     ];
 
     public function getUserEntities(Request $request)

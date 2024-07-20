@@ -22,4 +22,14 @@ class Funder extends Model
     {
         return $this->hasMany(FundersMetadata::class);
     }
+
+    public function credentials()
+    {
+        return $this->hasMany(TradingAccountCredential::class, 'funder_id');
+    }
+
+    public function tradeReports()
+    {
+        return $this->hasMany(TradeReport::class);
+    }
 }

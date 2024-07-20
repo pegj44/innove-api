@@ -43,6 +43,11 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
 
+    public function units()
+    {
+        return $this->hasMany(TradingUnitsModel::class);
+    }
+
     public function userUnitLogins()
     {
         return $this->hasMany(UserUnitLogin::class, 'user_id');
@@ -63,8 +68,13 @@ class User extends Authenticatable
         return $this->hasMany(Funder::class, 'user_id');
     }
 
-    public function tradingCredentials()
+    public function accountCredentials()
     {
-        return [];
+        return $this->hasMany(TradingAccountCredential::class);
+    }
+
+    public function tradeReports()
+    {
+        return $this->hasMany(TradeReport::class);
     }
 }

@@ -13,6 +13,8 @@ class TradingAccountCredential extends Model
         'user_id',
         'trading_individual_id',
         'funder_id',
+        'account_id',
+        'phase',
         'dashboard_login_url',
         'dashboard_login_username',
         'dashboard_login_password',
@@ -21,4 +23,24 @@ class TradingAccountCredential extends Model
         'platform_login_password',
         'status'
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function funder()
+    {
+        return $this->belongsTo(Funder::class, 'funder_id');
+    }
+
+    public function tradingIndividual()
+    {
+        return $this->belongsTo(TradingIndividual::class);
+    }
+
+    public function tradeReports()
+    {
+        return $this->hasMany(TradeReport::class);
+    }
 }

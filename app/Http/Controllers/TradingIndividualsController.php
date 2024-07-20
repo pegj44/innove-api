@@ -129,7 +129,7 @@ class TradingIndividualsController extends Controller
             $rawData = $request->except(['_token']);
             $data = [];
 
-            $individual = TradingIndividual::find($id);
+            $individual = TradingIndividual::where('id', $id)->where('user_id', auth()->id())->first();
 
             if ($individual->trading_unit_id != $rawData['unit']) {
                 $individual->trading_unit_id = $rawData['unit'];
