@@ -17,6 +17,10 @@ return new class extends Migration
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->unsignedBigInteger('trading_unit_id');
             $table->foreign('trading_unit_id')->references('id')->on('trading_units');
+            $table->string('first_name');
+            $table->string('middle_name');
+            $table->string('last_name');
+            $table->string('email');
             $table->timestamps();
         });
     }

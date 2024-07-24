@@ -45,8 +45,8 @@ class TradeReportController extends Controller
     private function validateUserInput($data)
     {
         $inputsToValidate = [
-            'trading_unit_id' => ['required', 'numeric'],
-            'funder_id' => ['required', 'numeric'],
+//            'trading_unit_id' => ['required', 'numeric'],
+//            'funder_id' => ['required', 'numeric'],
             'trade_account_credential_id' => ['required', 'numeric'],
             'starting_balance' => ['required', 'numeric'],
             'starting_equity' => ['required', 'numeric'],

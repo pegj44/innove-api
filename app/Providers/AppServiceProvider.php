@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\Funder;
+use App\Models\TradingIndividual;
+use App\Observers\FunderObserver;
+use App\Observers\TradingIndividualObserver;
 use Illuminate\Support\ServiceProvider;
 use Dotenv\Dotenv;
 
@@ -23,6 +27,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        TradingIndividual::observe(TradingIndividualObserver::class);
+        Funder::observe(FunderObserver::class);
     }
 }

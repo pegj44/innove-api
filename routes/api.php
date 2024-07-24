@@ -59,13 +59,14 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
 Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 {
     Route::get('user/entities', [UserEntityController::class, 'getUserEntities']);
-    Route::get('user/entities/individuals-and-funders', [UserEntityController::class, 'getUserIndividualsAndFunders']);
+//    Route::get('user/entities/individuals-and-funders', [UserEntityController::class, 'getUserIndividualsAndFunders']);
 
     Route::controller(TradingUnitsController::class)->group(function()
     {
         Route::post('/trading-unit', 'store');
         Route::post('/trading-unit/{id}', 'update');
         Route::get('/trading-units', 'getTradingUnits');
+        Route::get('/trading-units-array', 'getUnitsArray');
         Route::delete('trading-unit/{id}', 'destroy');
 
         Route::post('/trading-units/settings/set-password', 'setPassword');
@@ -89,6 +90,7 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
         Route::get('trading-individual/{id}', 'edit');
         Route::post('trading-individual/{id}', 'update');
         Route::delete('trading-individual/{id}', 'destroy');
+        Route::post('trading-individuals', 'uploadIndividuals');
     });
 
     Route::controller(TradingAccountCredential::class)->group(function()

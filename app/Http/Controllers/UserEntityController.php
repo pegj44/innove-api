@@ -10,9 +10,12 @@ class UserEntityController extends Controller
     protected $entities = [
         'tradingIndividuals',
         'tradingIndividuals.metadata',
+//        'tradingIndividuals.funder',
         'funders',
         'funders.metadata',
         'accountCredentials',
+        'accountCredentials.tradingIndividual',
+        'accountCredentials.tradingIndividual.metadata',
         'units',
     ];
 
@@ -34,26 +37,26 @@ class UserEntityController extends Controller
         }
     }
 
-    public function getUserIndividualsAndFunders()
-    {
-        try {
-            $data = User::with([
-                'tradingIndividuals' => function ($query) {
-                    $query->with(['metadata' => function ($query) {
-                        $query->whereIn('key', ['first_name', 'middle_name', 'last_name']);
-                    }]);
-                },
-                'funders' => function ($query) {
-                    $query->with(['metadata' => function ($query) {
-                        $query->whereIn('key', ['name', 'alias']);
-                    }]);
-                }
-            ])->where('id', auth()->id())->first();
-
-            return response()->json($data);
-
-        } catch (\Exception $e) {
-            return response()->json([]);
-        }
-    }
+//    public function getUserIndividualsAndFunders()
+//    {
+//        try {
+//            $data = User::with([
+//                'tradingIndividuals' => function ($query) {
+//                    $query->with(['metadata' => function ($query) {
+//                        $query->whereIn('key', ['first_name', 'middle_name', 'last_name']);
+//                    }]);
+//                },
+//                'funders' => function ($query) {
+//                    $query->with(['metadata' => function ($query) {
+//                        $query->whereIn('key', ['name', 'alias']);
+//                    }]);
+//                }
+//            ])->where('id', auth()->id())->first();
+//
+//            return response()->json($data);
+//
+//        } catch (\Exception $e) {
+//            return response()->json([]);
+//        }
+//    }
 }

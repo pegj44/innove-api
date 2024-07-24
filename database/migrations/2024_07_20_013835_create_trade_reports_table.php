@@ -15,10 +15,10 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-            $table->unsignedBigInteger('trading_unit_id');
-            $table->foreign('trading_unit_id')->references('id')->on('trading_units');
-            $table->unsignedBigInteger('funder_id');
-            $table->foreign('funder_id')->references('id')->on('funders')->onDelete('cascade');
+//            $table->unsignedBigInteger('trading_unit_id');
+//            $table->foreign('trading_unit_id')->references('id')->on('trading_units');
+//            $table->unsignedBigInteger('funder_id');
+//            $table->foreign('funder_id')->references('id')->on('funders')->onDelete('cascade');
             $table->unsignedBigInteger('trade_account_credential_id');
             $table->foreign('trade_account_credential_id')->references('id')->on('trading_account_credentials')->onDelete('cascade');
             $table->decimal('starting_balance');

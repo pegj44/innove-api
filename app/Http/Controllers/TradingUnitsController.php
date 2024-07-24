@@ -74,6 +74,25 @@ class TradingUnitsController extends Controller
         }
     }
 
+    public static function getUnitsArray()
+    {
+        $unitsObj = new TradingUnitsController();
+        $units = $unitsObj->getTradingUnits();
+        $units = $units->getData();
+
+        if (empty($units)) {
+            return [];
+        }
+
+        $unitsArr = [];
+
+        foreach ($units as $unit) {
+            $unitsArr[$unit->ip_address] = $unit->id;
+        }
+
+        return $unitsArr;
+    }
+
     public function getTradingUnits()
     {
         $units = TradingUnitsModel::where('user_id', auth()->id())

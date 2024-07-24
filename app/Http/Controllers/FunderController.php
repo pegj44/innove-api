@@ -47,14 +47,22 @@ class FunderController extends Controller
     {
         try {
             Validator::extend('valid_time', function($attribute, $value, $parameters, $validator) {
+                if (empty($value)) {
+                    return true;
+                }
                 return strtotime($value) !== false;
             }, 'The :attribute is not a valid time.');
 
             Validator::extend('valid_timezone', function ($attribute, $value, $parameters, $validator) {
+                if (empty($value)) {
+                    return true;
+                }
                 return in_array($value, timezone_identifiers_list());
             }, 'The :attribute is not a valid timezone.');
 
-            $validator = Validator::make($request->except('_token'), [
+            $data = $request->except('_token');
+
+            $validator = Validator::make($data, [
                 'name' => ['required', 'regex:/^[a-zA-Z0-9-_ ]+$/'],
                 'alias' => ['required', 'regex:/^[a-zA-Z0-9-_ ]+$/'],
                 'evaluation_type' => ['required', 'regex:/^[a-zA-Z0-9-_]+$/'],
@@ -73,11 +81,15 @@ class FunderController extends Controller
             ]);
 
             if ($validator->fails()) {
-                return response()->json(['errors' => $validator->errors()], 422);
+                return response()->json(['validation_error' => $validator->errors()], 422);
             }
 
             $funder = new Funder();
             $funder->user_id = auth()->id();
+            $funder->name = $data['name'];
+            $funder->alias = $data['alias'];
+            $funder->metaData = $data;
+
             $isCreated = $funder->save();
 
             if (!$isCreated) {
@@ -86,17 +98,17 @@ class FunderController extends Controller
                 ]);
             }
 
-            $fundersMetaArr = [];
-
-            foreach ($request->except(['_token']) as $key => $value) {
-                $fundersMetaArr[] = [
-                    'funder_id' => $funder->id,
-                    'key' => strip_tags($key),
-                    'value' => (!empty($value))? strip_tags($value) : ''
-                ];
-            }
-
-            FundersMetadata::insert($fundersMetaArr);
+//            $fundersMetaArr = [];
+//
+//            foreach ($request->except(['_token']) as $key => $value) {
+//                $fundersMetaArr[] = [
+//                    'funder_id' => $funder->id,
+//                    'key' => strip_tags($key),
+//                    'value' => (!empty($value))? strip_tags($value) : ''
+//                ];
+//            }
+//
+//            FundersMetadata::insert($fundersMetaArr);
 
             return response()->json([
                 'message' => __('Successfully created Funder.'),
