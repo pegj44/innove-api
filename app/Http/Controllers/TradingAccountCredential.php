@@ -13,7 +13,7 @@ class TradingAccountCredential extends Controller
      */
     public function getCredentials()
     {
-        $credentials = TradingAccountCredentialModel::with(['funder.metadata', 'tradingIndividual.metadata'])
+        $credentials = TradingAccountCredentialModel::with(['funder.metadata', 'tradingIndividual.tradingUnit'])
             ->where('user_id', auth()->id())
             ->get();
 

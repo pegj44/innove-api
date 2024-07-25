@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\FunderController;
+use App\Http\Controllers\TradePairAccountsController;
 use App\Http\Controllers\TradeReportController;
 use App\Http\Controllers\TradingAccountCredential;
 use App\Http\Controllers\TradingIndividualsController;
@@ -60,6 +61,12 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 {
     Route::get('user/entities', [UserEntityController::class, 'getUserEntities']);
 //    Route::get('user/entities/individuals-and-funders', [UserEntityController::class, 'getUserIndividualsAndFunders']);
+
+    Route::controller(TradePairAccountsController::class)->prefix('trade/')->group(function()
+    {
+        Route::post('/pair-accounts', 'pairAccounts');
+        Route::get('/paired-items', 'getPairedItems');
+    });
 
     Route::controller(TradingUnitsController::class)->group(function()
     {

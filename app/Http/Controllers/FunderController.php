@@ -23,6 +23,8 @@ class FunderController extends Controller
             return [
                 'id' => $funder->id,
                 'user_id' => $funder->user_id,
+                'name' => $funder->name,
+                'alias' => $funder->alias,
                 'created_at' => $funder->created_at,
                 'updated_at' => $funder->updated_at,
                 'metadata' => $funder->metadata->pluck('value', 'key')->toArray(),
@@ -40,45 +42,52 @@ class FunderController extends Controller
         //
     }
 
+    private function validateInput($data)
+    {
+        Validator::extend('valid_time', function($attribute, $value, $parameters, $validator) {
+            if (empty($value)) {
+                return true;
+            }
+            return strtotime($value) !== false;
+        }, 'The :attribute is not a valid time.');
+
+        Validator::extend('valid_timezone', function ($attribute, $value, $parameters, $validator) {
+            if (empty($value)) {
+                return true;
+            }
+            return in_array($value, timezone_identifiers_list());
+        }, 'The :attribute is not a valid timezone.');
+
+
+        return Validator::make($data, [
+            'name' => ['required', 'regex:/^[a-zA-Z0-9-_ ]+$/'],
+            'alias' => ['required', 'regex:/^[a-zA-Z0-9-_ ]+$/'],
+            'evaluation_type' => ['required', 'regex:/^[a-zA-Z0-9-_]+$/'],
+            'daily_threshold' => ['required', 'numeric'],
+            'daily_threshold_type' => ['required', 'regex:/^[a-zA-Z]+$/'],
+            'max_drawdown' => ['required', 'numeric'],
+            'max_drawdown_type' => ['required', 'regex:/^[a-zA-Z]+$/'],
+            'phase_one_target_profit' => ['required', 'numeric'],
+            'phase_one_target_profit_type' => ['required', 'regex:/^[a-zA-Z]+$/'],
+            'phase_two_target_profit' => ['required', 'numeric'],
+            'phase_two_target_profit_type' => ['required', 'regex:/^[a-zA-Z]+$/'],
+            'consistency_rule' => ['numeric'],
+            'consistency_rule_type' => ['regex:/^[a-zA-Z]+$/'],
+            'reset_time' => 'valid_time',
+            'reset_time_zone' => 'valid_timezone'
+        ]);
+    }
+
     /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
     {
         try {
-            Validator::extend('valid_time', function($attribute, $value, $parameters, $validator) {
-                if (empty($value)) {
-                    return true;
-                }
-                return strtotime($value) !== false;
-            }, 'The :attribute is not a valid time.');
-
-            Validator::extend('valid_timezone', function ($attribute, $value, $parameters, $validator) {
-                if (empty($value)) {
-                    return true;
-                }
-                return in_array($value, timezone_identifiers_list());
-            }, 'The :attribute is not a valid timezone.');
 
             $data = $request->except('_token');
 
-            $validator = Validator::make($data, [
-                'name' => ['required', 'regex:/^[a-zA-Z0-9-_ ]+$/'],
-                'alias' => ['required', 'regex:/^[a-zA-Z0-9-_ ]+$/'],
-                'evaluation_type' => ['required', 'regex:/^[a-zA-Z0-9-_]+$/'],
-                'daily_threshold' => ['required', 'numeric'],
-                'daily_threshold_type' => ['required', 'regex:/^[a-zA-Z]+$/'],
-                'max_drawdown' => ['required', 'numeric'],
-                'max_drawdown_type' => ['required', 'regex:/^[a-zA-Z]+$/'],
-                'phase_one_target_profit' => ['required', 'numeric'],
-                'phase_one_target_profit_type' => ['required', 'regex:/^[a-zA-Z]+$/'],
-                'phase_two_target_profit' => ['required', 'numeric'],
-                'phase_two_target_profit_type' => ['required', 'regex:/^[a-zA-Z]+$/'],
-                'consistency_rule' => ['numeric'],
-                'consistency_rule_type' => ['regex:/^[a-zA-Z]+$/'],
-                'reset_time' => 'valid_time',
-                'reset_time_zone' => 'valid_timezone'
-            ]);
+            $validator = $this->validateInput($data);
 
             if ($validator->fails()) {
                 return response()->json(['validation_error' => $validator->errors()], 422);
@@ -97,18 +106,6 @@ class FunderController extends Controller
                     'errors' => __('Failed to create Funder.')
                 ]);
             }
-
-//            $fundersMetaArr = [];
-//
-//            foreach ($request->except(['_token']) as $key => $value) {
-//                $fundersMetaArr[] = [
-//                    'funder_id' => $funder->id,
-//                    'key' => strip_tags($key),
-//                    'value' => (!empty($value))? strip_tags($value) : ''
-//                ];
-//            }
-//
-//            FundersMetadata::insert($fundersMetaArr);
 
             return response()->json([
                 'message' => __('Successfully created Funder.'),
@@ -147,6 +144,8 @@ class FunderController extends Controller
             return [
                 'id' => $funder->id,
                 'user_id' => $funder->user_id,
+                'name' => $funder->name,
+                'alias' => $funder->alias,
                 'created_at' => $funder->created_at,
                 'updated_at' => $funder->updated_at,
                 'metadata' => $funder->metadata->pluck('value', 'key')->toArray(),
@@ -166,24 +165,29 @@ class FunderController extends Controller
     public function update(Request $request, string $id)
     {
         try {
-            $data = [];
 
-            foreach ($request->except(['_token']) as $key => $value) {
-                $data[] = [
-                    'funder_id' => $id,
-                    'key' => strip_tags($key),
-                    'value' => (!empty($value))? strip_tags($value) : ''
-                ];
+            $data = $request->except(['_token']);
+            $validator = self::validateInput($data);
+
+            if ($validator->fails()) {
+                return response()->json(['validation_error' => $validator->errors()], 422);
             }
 
-            $success = FundersMetadata::upsert($data, uniqueBy: ['funder_id', 'key'], update: ['value']);
+            $funder = Funder::where('id', $id)->where('user_id', auth()->id())->first();
+
+            $funder->name = $data['name'];
+            $funder->alias = $data['alias'];
+            $funder->metaData = $data;
+
+            $success = $funder->update();
 
             if (!$success) {
                 return response()->json(['errors' => __('Failed to update the funder info.')]);
             }
 
-            return response()->json(['message' => __('Successfully updated Funder info.')]);
+            $funder->updateMetadata($funder);
 
+            return response()->json(['message' => __('Successfully updated Funder info.')]);
         } catch (\Exception $e) {
             info(print_r([
                 'funderUpdateError' => $e->getMessage()

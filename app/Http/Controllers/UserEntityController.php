@@ -10,7 +10,7 @@ class UserEntityController extends Controller
     protected $entities = [
         'tradingIndividuals',
         'tradingIndividuals.metadata',
-//        'tradingIndividuals.funder',
+        'tradingIndividuals.tradingUnit',
         'funders',
         'funders.metadata',
         'accountCredentials',

@@ -26,16 +26,6 @@ class TradeReport extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function unit()
-    {
-        return $this->belongsTo(TradingUnitsModel::class, 'trading_unit_id');
-    }
-
-    public function funder()
-    {
-        return $this->belongsTo(Funder::class);
-    }
-
     public function tradeCredential()
     {
         return $this->belongsTo(TradingAccountCredential::class, 'trade_account_credential_id');

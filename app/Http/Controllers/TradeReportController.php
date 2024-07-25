@@ -10,7 +10,7 @@ class TradeReportController extends Controller
 {
     public function getReports()
     {
-        $items = TradeReport::with('unit', 'funder.metadata', 'tradeCredential')
+        $items = TradeReport::with('tradeCredential.tradingIndividual.tradingUnit', 'tradeCredential.funder.metadata')
             ->where('user_id', auth()->id())->get();
 
         return response()->json($items);
@@ -19,7 +19,7 @@ class TradeReportController extends Controller
     public function store(Request $request)
     {
         try {
-            $data = array_filter($request->except('_token'));
+            $data = $request->except('_token');
             $validator = $this->validateUserInput($data);
 
             if ($validator->fails()) {
@@ -60,12 +60,11 @@ class TradeReportController extends Controller
     public function edit(string $id)
     {
         try {
-            $items = TradeReport::with('unit', 'funder.metadata', 'tradeCredential')
+            $item = TradeReport::with('tradeCredential.tradingIndividual.tradingUnit', 'tradeCredential.funder.metadata')
                 ->where('id', $id)
-                ->where('user_id', auth()->id())
-                ->first();
+                ->where('user_id', auth()->id())->first();
 
-            return response()->json($items);
+            return response()->json($item);
         } catch (\Exception $e) {
             info(print_r([
                 'errorEditCredential' => $e->getMessage()
@@ -77,8 +76,7 @@ class TradeReportController extends Controller
     public function update(Request $request, string $id)
     {
         try {
-            $data = array_filter($request->except('_token'));
-
+            $data = $request->except('_token');
             $validator = $this->validateUserInput($data);
 
             if ($validator->fails()) {

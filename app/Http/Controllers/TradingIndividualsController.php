@@ -102,18 +102,6 @@ class TradingIndividualsController extends Controller
                 return response()->json(['errors' => __('Failed to create record')]);
             }
 
-//            $individualMetadata = [];
-//
-//            foreach ($data as $key => $value) {
-//                $individualMetadata[] = [
-//                    'trading_individual_id' => $individual->id,
-//                    'key' => strip_tags($key),
-//                    'value' => (!empty($value))? strip_tags($value) : ''
-//                ];
-//            }
-//
-//            TradingIndividualMetadata::insert($individualMetadata);
-
             return response()->json(['message' => __('Successfully created item')]);
         } catch (\Exception $e) {
             info(print_r([

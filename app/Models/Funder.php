@@ -61,6 +61,9 @@ class Funder extends Model
         $metaData = [];
 
         foreach ($data->metaData as $key => $value) {
+            if (!in_array($key, FundersMetadata::$defaultMetadata)) {
+                continue;
+            }
             $metaData[] = [
                 'funder_id' => $data->id,
                 'key' => strip_tags($key),

@@ -77,4 +77,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(TradeReport::class);
     }
+
+    public function pairedItems()
+    {
+        return $this->hasMany(PairedItems::class);
+    }
 }

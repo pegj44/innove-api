@@ -39,8 +39,8 @@ class TradingAccountCredential extends Model
         return $this->belongsTo(TradingIndividual::class);
     }
 
-//    public function tradeReports()
-//    {
-//        return $this->hasMany(TradeReport::class);
-//    }
+    public function tradeReports()
+    {
+        return $this->hasMany(TradeReport::class);
+    }
 }

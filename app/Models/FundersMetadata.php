@@ -40,4 +40,26 @@ class FundersMetadata extends Model
     {
         return $this->belongsTo(Funder::class);
     }
+
+    /**
+     * Check and mutates the meta_value attribute to serialized if value is array.
+     *
+     * @param $value
+     * @return void
+     */
+    public function setValueAttribute($value)
+    {
+        $this->attributes['value'] = maybe_serialize($value);
+    }
+
+    /**
+     * Check and mutates the meta_value attribute to un-serialized if value is array.
+     *
+     * @param $value
+     * @return mixed
+     */
+    public function getValueAttribute($value)
+    {
+        return maybe_unserialize($value);
+    }
 }
