@@ -143,8 +143,10 @@ class TradingUnitsController extends Controller
             }
 
             $unitLogin->name = $request->get('username');
-            $unitLogin->email = $data['username'] .'-'. $currentUserId .'@innovetechsolutions.rpahandler';
-            $unitLogin->password = Hash::make($request->get('password'));
+            $unitLogin->email = $data['username'] .'@innovetechsolutions.rpahandler';
+            if (!empty($pwData)) {
+                $unitLogin->password = Hash::make($request->get('password'));
+            }
             $isUpdated = $unitLogin->update();
 
             if (!$isUpdated) {
@@ -168,7 +170,7 @@ class TradingUnitsController extends Controller
         try {
             $currentUserId = auth()->id();
             $data = $request->only(['username', 'password', 'password_confirmation']);
-            $email = $request->get('username') .'-'. $currentUserId .'@innovetechsolutions.rpahandler';
+            $email = $request->get('username') .'@innovetechsolutions.rpahandler';
             $data['email'] = $email;
 
             $validator = Validator::make($data, [
@@ -203,7 +205,7 @@ class TradingUnitsController extends Controller
                 ]);
             }
 
-            $user->createToken('innove-unit-api', ['unit'])->plainTextToken;
+            $user->createToken(env('UNIT_TOKEN_NAME'), ['unit'])->plainTextToken;
 
             UserUnitLogin::create([
                 'user_id' => $currentUserId,

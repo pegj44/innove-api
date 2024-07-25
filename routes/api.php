@@ -37,6 +37,10 @@ Route::post('/login', [AuthenticatedSessionController::class, 'store'])
     ->middleware('guest')
     ->name('login');
 
+Route::post('/unit-login', [AuthenticatedSessionController::class, 'loginUnit'])
+    ->middleware('guest')
+    ->name('unit-login');
+
 Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])
     ->middleware('guest')
     ->name('password.email');
@@ -125,4 +129,11 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 Route::middleware(['auth:sanctum', 'ability:unit'])->group(function()
 {
     Route::post('test-broadcast', [TradingUnitsController::class, 'testBroadcastConnection']);
+});
+
+Route::middleware(['auth:sanctum', 'ability:unit'])->group(function()
+{
+    Route::post('test-connection', function() {
+        return 'account connected.';
+    });
 });

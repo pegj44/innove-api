@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthenticatedSessionController extends Controller
@@ -47,6 +48,40 @@ class AuthenticatedSessionController extends Controller
 
         return response()->json([
             'errors' => 'Invalid credentials'
+        ], 401);
+    }
+
+    public function loginUnit(Request $request)
+    {
+        $validator = Validator::make($request->only(['username', 'password']), [
+            'username' => 'required',
+            'password' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => __('Login validation failed.')]);
+        }
+
+        $loginData = $request->only('username', 'password');
+        $loginData['email'] = $request->get('username') .'@innovetechsolutions.rpahandler';
+
+        unset($loginData['username']);
+
+        if (Auth::attempt($loginData)) {
+            $tokenName = env('UNIT_TOKEN_NAME');
+            $user = Auth::user();
+            $token = $user->createToken($tokenName, ['unit'])->plainTextToken;
+
+            return response()->json([
+                'token' => $token,
+                'userId' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ]);
+        }
+
+        return response()->json([
+            'errors' => 'Invalid unit login'
         ], 401);
     }
 

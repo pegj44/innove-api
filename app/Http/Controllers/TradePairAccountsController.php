@@ -40,9 +40,13 @@ class TradePairAccountsController extends Controller
         $pnl1 = $this->calculatePnL($item1);
         $pnl2 = $this->calculatePnL($item2);
 
-        if ($pnl1 != 0 && $pnl2 != 0) {
+        if (($pnl1 > 0 && $pnl2 > 0) || ($pnl1 < 0 && $pnl2 < 0)) {
             $distance = abs($pnl1 - $pnl2) + abs(floatval($item1['latest_equity']) - floatval($item2['latest_equity']));
         } else {
+            $distance = PHP_FLOAT_MAX;
+        }
+
+        if ($pnl1 == 0 || $pnl2 == 0) {
             $distance = abs(floatval($item1['latest_equity']) - floatval($item2['latest_equity'])) + abs(floatval($item1['starting_balance']) - floatval($item2['starting_balance']));
         }
 
