@@ -10,7 +10,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class UnitsRequestReceived
+class UnitsRequestReceived implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -28,10 +28,13 @@ class UnitsRequestReceived
      *
      * @return array<int, \Illuminate\Broadcasting\Channel>
      */
-    public function broadcastOn(): array
+    public function broadcastOn(): Channel
     {
-        return [
-            new PrivateChannel('innove-unit-request'),
-        ];
+//        return [
+//            new PrivateChannel('innove-rpa-staging'),
+//        ];
+
+        return new PrivateChannel('orders.'.$this->order->id);
+
     }
 }

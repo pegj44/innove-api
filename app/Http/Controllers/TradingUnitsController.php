@@ -294,6 +294,6 @@ class TradingUnitsController extends Controller
 
     public function testBroadcastConnection(Request $request)
     {
-        event(new UnitsRequestReceived($request->get('message')));
+        event(new UnitsRequestReceived('External request has been received!'));
     }
 }
