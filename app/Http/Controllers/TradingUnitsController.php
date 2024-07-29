@@ -236,7 +236,7 @@ class TradingUnitsController extends Controller
     {
         $userId = Auth::id();
 
-        return User::whereHas('unitUserLogins', function ($query) use ($userId) {
+        return User::whereHas('unitUserLogin', function ($query) use ($userId) {
             $query->where('user_id', $userId);
         })->first();
     }

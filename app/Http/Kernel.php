@@ -3,6 +3,7 @@
 namespace App\Http;
 
 use App\Http\Middleware\CustomSanctumAuth;
+use App\Http\Middleware\UnitMiddleware;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
 
 class Kernel extends HttpKernel
@@ -72,7 +73,8 @@ class Kernel extends HttpKernel
     protected $routeMiddleware = [
         'auth.basic2' => \App\Http\Middleware\AuthenticateWithBasicAuth::class,
         'auth_api' => CustomSanctumAuth::class,
-        'ability' => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class
+        'ability' => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class,
+//        'unit' => UnitMiddleware::class
     ];
 
 

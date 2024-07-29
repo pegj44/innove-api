@@ -134,6 +134,15 @@ Route::middleware(['auth:sanctum', 'ability:unit'])->group(function()
 Route::middleware(['auth:sanctum', 'ability:unit'])->group(function()
 {
     Route::post('test-connection', function() {
-        return 'account connected.';
+        return response()->json(['test' => 1]);
+    });
+});
+
+
+Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
+{
+    Route::get('test', function()
+    {
+        return response()->json(['test2' => 3]);
     });
 });

@@ -59,7 +59,9 @@ class AuthenticatedSessionController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['error' => __('Login validation failed.')]);
+            return response()->json([
+                'errors' => __('Login validation failed.')
+            ], 401);
         }
 
         $loginData = $request->only('username', 'password');
@@ -68,20 +70,63 @@ class AuthenticatedSessionController extends Controller
         unset($loginData['username']);
 
         if (Auth::attempt($loginData)) {
-            $tokenName = env('UNIT_TOKEN_NAME');
-            $user = Auth::user();
-            $token = $user->createToken($tokenName, ['unit'])->plainTextToken;
 
-            return response()->json([
-                'token' => $token,
-                'userId' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-            ]);
+                $tokenName = env('UNIT_TOKEN_NAME');
+                $user = Auth::user();
+
+                $userUnits = User::with('unitUserLogin.user.units')
+                    ->where('id', auth()->id())
+                    ->first();
+
+                if (empty($userUnits)) {
+                    return response()->json([
+                        'errors' => 'No units registered to this account.'
+                    ], 401);
+                }
+
+                $userUnits = $userUnits->toArray();
+
+                if (empty($userUnits['unit_user_login']['user']['units'])) {
+                    return response()->json([
+                        'errors' => 'No units registered to this account.'
+                    ], 401);
+                }
+
+                $hasUnit = false;
+
+                foreach ($userUnits['unit_user_login']['user']['units'] as $unit) {
+                    if ($unit['ip_address'] === $request->get('ip')) {
+
+                        if (!$unit['status']) {
+                            return response()->json([
+                                'errors' => 'The unit '. $request->get('ip') .' is deactivated.'
+                            ], 401);
+                        }
+
+                        $hasUnit = true;
+                        break;
+                    }
+                }
+
+                if (!$hasUnit) {
+                    return response()->json([
+                        'errors' => 'The IP: '. $request->get('ip') .' is not registered.'
+                    ], 401);
+                }
+
+                $token = $user->createToken($tokenName, ['unit'])->plainTextToken;
+
+                return response()->json([
+                    'token' => $token,
+                    'userId' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'ip' => $request->get('ip')
+                ]);
         }
 
         return response()->json([
-            'errors' => 'Invalid unit login'
+            'errors' => 'Invalid unit login.'
         ], 401);
     }
 

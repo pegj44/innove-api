@@ -48,14 +48,14 @@ class User extends Authenticatable
         return $this->hasMany(TradingUnitsModel::class);
     }
 
-    public function userUnitLogins()
-    {
-        return $this->hasMany(UserUnitLogin::class, 'user_id');
-    }
+//    public function userUnitLogins()
+//    {
+//        return $this->hasMany(UserUnitLogin::class, 'user_id');
+//    }
 
-    public function unitUserLogins()
+    public function unitUserLogin()
     {
-        return $this->hasMany(UserUnitLogin::class, 'unit_user_id');
+        return $this->hasOne(UserUnitLogin::class, 'unit_user_id');
     }
 
     public function tradingIndividuals()

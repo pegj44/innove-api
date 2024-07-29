@@ -19,8 +19,8 @@ class UserUnitLogin extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function unitUser()
-    {
-        return $this->belongsTo(User::class, 'unit_user_id');
-    }
+//    public function unitUser()
+//    {
+//        return $this->belongsTo(User::class, 'unit_user_id');
+//    }
 }
