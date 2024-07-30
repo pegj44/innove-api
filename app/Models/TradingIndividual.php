@@ -50,8 +50,8 @@ class TradingIndividual extends Model
                 continue;
             }
             $this->metadata()->create([
-                'key' => $key,
-                'value' => $value
+                'key' => strip_tags($key),
+                'value' => (!empty($value))? strip_tags($value) : ''
             ]);
         }
     }
