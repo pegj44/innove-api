@@ -42,6 +42,11 @@ class TradeReportController extends Controller
         }
     }
 
+    /**
+     * @todo add support for update data without needing the required fields.
+     * @param $data
+     * @return \Illuminate\Validation\Validator
+     */
     private function validateUserInput($data)
     {
         $inputsToValidate = [
@@ -77,11 +82,11 @@ class TradeReportController extends Controller
     {
         try {
             $data = $request->except('_token');
-            $validator = $this->validateUserInput($data);
-
-            if ($validator->fails()) {
-                return response()->json(['errors' => $validator->errors()], 422);
-            }
+//            $validator = $this->validateUserInput($data);
+//
+//            if ($validator->fails()) {
+//                return response()->json(['errors' => $validator->errors()], 422);
+//            }
 
             $item = TradeReport::where('id', $id)->where('user_id', auth()->id())->first();
 
