@@ -1,5 +1,31 @@
 <?php
 
+function getAuthUserId()
+{
+    if (auth()->user()->can('unit')) {
+        $user = \App\Models\User::with('unitUserLogin')
+            ->where('id', auth()->id())
+            ->first();
+
+        return $user->unitUserLogin->user_id;
+    }
+
+    return auth()->id();
+}
+
+function getAuthUser()
+{
+    if (auth()->user()->can('unit')) {
+        $user = \App\Models\User::with('unitUserLogin')
+            ->where('id', auth()->id())
+            ->first();
+
+        return \App\Models\User::find($user->unitUserLogin->user_id);
+    }
+
+    return auth()->user();
+}
+
 if (!function_exists('maybe_serialize')) {
     /**
      * Check if value is array, serialize if so.
