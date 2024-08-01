@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\CalculationsController;
 use App\Http\Controllers\FunderController;
 use App\Http\Controllers\TradePairAccountsController;
 use App\Http\Controllers\TradeReportController;
@@ -125,6 +126,11 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
         Route::post('trade/report/{id}', 'update');
         Route::patch('trade/report/updateByFunderAccount', 'updateByFunderAccount');
         Route::delete('trade/report/{id}', 'destroy');
+    });
+
+    Route::controller(CalculationsController::class)->prefix('calculate')->group(function()
+    {
+       Route::post('tp-sl', 'calculateTpSl');
     });
 });
 

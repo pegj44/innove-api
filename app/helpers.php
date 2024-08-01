@@ -1,5 +1,26 @@
 <?php
 
+function parseArgs($array, $default)
+{
+    if (!is_array($array)) {
+        $array = [];
+    }
+    if (!is_array($default)) {
+        $default = [];
+    }
+
+    $newArr = [];
+
+    foreach ($array as $key => $value) {
+        $newArr[$key] = $value;
+        if ($value === null && isset($default[$key])) {
+            $newArr[$key] = $default[$key];
+        }
+    }
+
+    return array_merge($default, $newArr);
+}
+
 function getAuthUserId()
 {
     if (auth()->user()->can('unit')) {

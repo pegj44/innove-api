@@ -37,7 +37,7 @@ class FunderController extends Controller
     public static function getByUrl($loginType, $url)
     {
         $funderMeta = FundersMetadata::where('key', $loginType)
-            ->where('value', 'like', '%'. $url .'%')
+            ->where('value', 'like', '%'. trim($url,'/') .'%')
             ->first();
 
         if (!$funderMeta) {
