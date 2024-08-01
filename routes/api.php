@@ -70,6 +70,7 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
     {
         Route::post('/pair-accounts', 'pairAccounts');
         Route::get('/paired-items', 'getPairedItems');
+        Route::delete('/paired-items', 'clearPairedItems');
     });
 
     Route::controller(TradingUnitsController::class)->group(function()

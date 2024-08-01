@@ -131,4 +131,12 @@ class TradePairAccountsController extends Controller
 
         PairedItems::insert($filteredData);
     }
+
+    public function clearPairedItems()
+    {
+        $pairedItems = PairedItems::where('user_id', auth()->id());
+        $pairedItems->delete();
+
+        return response()->json(['message' => __('Successfully cleared items.')]);
+    }
 }
