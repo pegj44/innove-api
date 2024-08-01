@@ -15,10 +15,8 @@ class TradingAccountCredential extends Model
         'funder_id',
         'account_id',
         'phase',
-        'dashboard_login_url',
         'dashboard_login_username',
         'dashboard_login_password',
-        'platform_login_url',
         'platform_login_username',
         'platform_login_password',
         'status'

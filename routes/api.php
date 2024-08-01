@@ -123,6 +123,7 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
         Route::post('trade/report', 'store');
         Route::get('trade/report/{id}', 'edit');
         Route::post('trade/report/{id}', 'update');
+        Route::patch('trade/report/updateByFunderAccount', 'updateByFunderAccount');
         Route::delete('trade/report/{id}', 'destroy');
     });
 });

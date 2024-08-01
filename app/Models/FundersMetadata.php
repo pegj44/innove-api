@@ -21,6 +21,8 @@ class FundersMetadata extends Model
     ];
 
     public static $defaultMetadata = [
+        'dashboard_url',
+        'platform_url',
         'evaluation_type',
         'daily_threshold',
         'daily_threshold_type',

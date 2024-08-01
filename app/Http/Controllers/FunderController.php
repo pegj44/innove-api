@@ -34,6 +34,19 @@ class FunderController extends Controller
         return response()->json($fundersWithMetadata);
     }
 
+    public static function getByUrl($loginType, $url)
+    {
+        $funderMeta = FundersMetadata::where('key', $loginType)
+            ->where('value', 'like', '%'. $url .'%')
+            ->first();
+
+        if (!$funderMeta) {
+            return false;
+        }
+
+        return Funder::find($funderMeta->funder_id);
+    }
+
     /**
      * Show the form for creating a new resource.
      */
@@ -62,6 +75,8 @@ class FunderController extends Controller
         return Validator::make($data, [
             'name' => ['required', 'regex:/^[a-zA-Z0-9-_ ]+$/'],
             'alias' => ['required', 'regex:/^[a-zA-Z0-9-_ ]+$/'],
+            'platform_url' => ['required', 'url'],
+            'dashboard_url' => ['required', 'url'],
             'evaluation_type' => ['required', 'regex:/^[a-zA-Z0-9-_]+$/'],
             'daily_threshold' => ['required', 'numeric'],
             'daily_threshold_type' => ['required', 'regex:/^[a-zA-Z]+$/'],

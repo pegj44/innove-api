@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\TradeReport;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -77,6 +78,61 @@ class TradeReportController extends Controller
             return response()->json(['errors' => __('Error retrieving data.')]);
         }
     }
+
+    public function updateByFunderAccount(Request $request)
+    {
+        $data = $request->except('_token');
+
+        $inputsToValidate = [
+            'account_url_type' => ['required'],
+            'account_url' => ['required', 'url'],
+            'account_id' => ['required']
+        ];
+
+        $validator = Validator::make($data, $inputsToValidate);
+
+        if ($validator->fails()) {
+            return response()->json(['validation_errors' => $validator->errors()], 422);
+        }
+
+        $funder = FunderController::getByUrl($request->get('account_url_type'), $request->get('account_url'));
+
+        if (!$funder) {
+            return response()->json(['errors' => __('Funder not found.')]);
+        }
+
+        $funder_id = $funder->id;
+        $account_id = $request->get('account_id');
+
+        $tradeReport = TradeReport::whereHas('tradingAccountCredential', function (Builder $query) use ($account_id, $funder_id) {
+            $query->where('account_id', $account_id)
+                ->whereHas('funder', function (Builder $query) use ($funder_id) {
+                    $query->where('id', $funder_id);
+                });
+        })->first();
+
+        if (!$tradeReport) {
+            return [];
+        }
+
+        try {
+            $tradeReport->fill($data);
+            $update = $tradeReport->update();
+
+            if (!$update) {
+                return response()->json(['errors' => __('Failed to update trade report.')]);
+            }
+
+            return response()->json(['message' => __('Successfully updated trade report.')]);
+        } catch (\Exception $e) {
+            info(print_r([
+                'errorPatchTradeReport' => $e->getMessage()
+            ], true));
+            return response()->json(['errors' => __('Error updating trade report.')]);
+        }
+    }
+
+
 
     public function update(Request $request, string $id)
     {

@@ -30,4 +30,14 @@ class TradeReport extends Model
     {
         return $this->belongsTo(TradingAccountCredential::class, 'trade_account_credential_id');
     }
+
+    public function tradingAccountCredential()
+    {
+        return $this->belongsTo(TradingAccountCredential::class, 'trade_account_credential_id');
+    }
+
+    public function funder()
+    {
+        return $this->belongsTo(Funder::class, 'funder_id');
+    }
 }

@@ -72,14 +72,12 @@ class TradingAccountCredential extends Controller
             'status' => ['required']
         ];
 
-        if (array_intersect(array_keys($data), ['dashboard_login_url', 'dashboard_login_username', 'dashboard_login_password'])) {
-            $inputsToValidate['dashboard_login_url'] = ['required', 'url'];
+        if (array_intersect(array_keys($data), ['dashboard_login_username', 'dashboard_login_password'])) {
             $inputsToValidate['dashboard_login_username'] = ['required',];
             $inputsToValidate['dashboard_login_password'] = ['required'];
         }
 
-        if (array_intersect(array_keys($data), ['platform_login_url', 'platform_login_username', 'platform_login_password'])) {
-            $inputsToValidate['platform_login_url'] = ['required', 'url'];
+        if (array_intersect(array_keys($data), ['platform_login_username', 'platform_login_password'])) {
             $inputsToValidate['platform_login_username'] = ['required'];
             $inputsToValidate['platform_login_password'] = ['required'];
         }
