@@ -44,27 +44,27 @@ class TradingIndividualsController extends Controller
     private static function validateInputs($data)
     {
         $fields = [
-            'type' => ['required', 'regex:/^[a-zA-Z0-9-_ ]+$/'],
+            'type' => ['required'],
             'unit' => ['required', 'numeric'],
-            'first_name' => ['required', 'regex:/^[a-zA-Z0-9- ]+$/'],
-            'middle_name' => ['required', 'regex:/^[a-zA-Z0-9- ]+$/'],
-            'last_name' => ['required', 'regex:/^[a-zA-Z0-9- ]+$/'],
-            'address' => ['required', 'regex:/^[a-zA-Z0-9\s,.\-()]+$/'],
-            'city' => ['required', 'regex:/^[a-zA-Z0-9\s,.\-()]+$/'],
-            'province' => ['required', 'regex:/^[a-zA-Z0-9\s,.\-()]+$/'],
-            'zip_code' => ['required', 'regex:/^[a-zA-Z0-9\s,.\-()]+$/'],
-            'contact_number1' => ['required', 'regex:/^\+?[0-9\s\-()]*$/'],
+            'first_name' => ['required'],
+            'middle_name' => ['required'],
+            'last_name' => ['required'],
+            'address' => ['required'],
+            'city' => ['required'],
+            'province' => ['required'],
+            'zip_code' => ['required'],
+            'contact_number1' => ['required'],
             'birth_year' => ['required', 'numeric'],
             'birth_month' => ['required', 'numeric'],
             'birth_day' => ['required', 'numeric'],
-            'id_type' => ['required', 'regex:/^[a-zA-Z0-9\s,.\-()]+$/'],
-            'billing' => ['required', 'regex:/^[a-zA-Z0-9\s,.\-()]+$/'],
+            'id_type' => ['required'],
+            'billing' => ['required'],
             'email' => ['required', 'email']
         ];
 
-        if (!empty($data['contact_number2'])) {
-            $fields['contact_number2'] = ['regex:/^\+?[0-9\s\-()]*$/'];
-        }
+//        if (!empty($data['contact_number2'])) {
+//            $fields['contact_number2'] = ['regex:/^\+?[0-9\s\-()]*$/'];
+//        }
 
         return Validator::make($data, $fields);
     }

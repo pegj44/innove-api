@@ -30,11 +30,8 @@ class UnitsRequestReceived implements ShouldBroadcast
      */
     public function broadcastOn(): Channel
     {
-//        return [
-//            new PrivateChannel('innove-rpa-staging'),
-//        ];
-
-        return new PrivateChannel('orders.'.$this->order->id);
-
+        return [
+            new PrivateChannel('innove-rpa-staging'),
+        ];
     }
 }
