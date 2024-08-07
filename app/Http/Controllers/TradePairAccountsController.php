@@ -93,7 +93,8 @@ class TradePairAccountsController extends Controller
             'tradeReportPair2.tradeCredential.tradingIndividual.tradingUnit',
             'tradeReportPair2.tradeCredential.funder.metadata'
         ])
-            ->get();
+        ->where('user_id', auth()->id())
+        ->get();
 
         return response()->json($pairedItems);
     }
