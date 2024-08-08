@@ -1,5 +1,12 @@
 <?php
 
+//function logDebug($name, $data = [])
+//{
+//    info(print_r([
+//        $name => $data
+//    ], true));
+//}
+
 function parseArgs($array, $default)
 {
     if (!is_array($array)) {

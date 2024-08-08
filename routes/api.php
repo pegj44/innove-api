@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\CalculationsController;
 use App\Http\Controllers\FunderController;
+use App\Http\Controllers\TradeController;
 use App\Http\Controllers\TradePairAccountsController;
 use App\Http\Controllers\TradeReportController;
 use App\Http\Controllers\TradingAccountCredential;
@@ -128,16 +129,23 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
         Route::delete('trade/report/{id}', 'destroy');
     });
 
+    Route::controller(TradeController::class)->group(function()
+    {
+        Route::post('trade/initiate', 'initiateTrade');
+    });
+
     Route::controller(CalculationsController::class)->prefix('calculate')->group(function()
     {
        Route::post('tp-sl', 'calculateTpSl');
     });
 });
 
-Route::middleware(['auth:sanctum', 'ability:unit'])->group(function()
+Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 {
     Route::post('test-broadcast', [TradingUnitsController::class, 'testBroadcastConnection']);
 });
+
+
 
 Route::middleware(['auth:sanctum', 'ability:unit'])->group(function()
 {

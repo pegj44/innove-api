@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\UnitController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -14,7 +15,12 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', function () {
-    return ['Laravel' => app()->version()];
+    return 'Welcome';
+});
+
+Route::middleware(['auth'])->controller(UnitController::class)->group(function ()
+{
+    Route::get('unit', 'main')->name('main');
 });
 
 require __DIR__.'/auth.php';

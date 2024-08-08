@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'default' => env('BROADCAST_DRIVER', 'pusher'),
+    'default' => env('BROADCAST_DRIVER', 'null'),
 
     /*
     |--------------------------------------------------------------------------
@@ -41,8 +41,7 @@ return [
                 'port' => env('PUSHER_PORT', 443),
                 'scheme' => env('PUSHER_SCHEME', 'https'),
                 'encrypted' => true,
-//                'useTLS' => env('PUSHER_SCHEME', 'https') === 'https',
-                'useTLS' => true
+                'useTLS' => env('PUSHER_SCHEME', 'https') === 'https',
             ],
             'client_options' => [
                 // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html

@@ -20,6 +20,14 @@ class AuthenticatedSessionController extends Controller
         ]);
     }
 
+    public function unitUiLogin(LoginRequest $request)
+    {
+        $request->authenticate();
+        $request->session()->regenerate();
+
+        return redirect()->route('main');
+    }
+
     /**
      * Handle an incoming authentication request.
      */

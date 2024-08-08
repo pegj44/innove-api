@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\UnitsEvent;
 use App\Events\UnitsRequestReceived;
 use App\Models\TradingUnitsModel;
 use App\Models\User;
@@ -294,6 +295,6 @@ class TradingUnitsController extends Controller
 
     public function testBroadcastConnection(Request $request)
     {
-        event(new UnitsRequestReceived('External request has been received!'));
+        UnitsEvent::dispatch(9, '100.22.3', 'testcommand2');
     }
 }
