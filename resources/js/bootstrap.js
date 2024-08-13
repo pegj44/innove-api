@@ -35,9 +35,10 @@ function startSimple(params)
 {
     console.log(params);
     UiPathRobot.init(10);
-
+console.log(UiPathRobot.getProcesses());
     UiPathRobot.getProcesses().then(processes =>
     {
+        console.log(processes);
         let process = processes.find(p => p.name.includes('BrowserJsTest'));
         let processArgs = {
             unit1: params.arguments.unit1,
@@ -58,6 +59,6 @@ function startSimple(params)
     //alert('startx');
 }
 
-window.Echo.private('unit.'+ window.App.userId).listen('UnitsEvent', response => {
+window.Echo.private('unit.3').listen('UnitsEvent', response => {
     startSimple(response);
 });

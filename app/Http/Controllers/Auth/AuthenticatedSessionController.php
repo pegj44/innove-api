@@ -42,7 +42,7 @@ class AuthenticatedSessionController extends Controller
 
             $tokenName = env('ADMIN_TOKEN_NAME');
             $user = Auth::user();
-            $this->revokeToken($user->id, $tokenName);
+//            $this->revokeToken($user->id, $tokenName);
 
             $token = $user->createToken($tokenName, ['admin'])->plainTextToken;
 

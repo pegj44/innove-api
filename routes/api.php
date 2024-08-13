@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\CalculationsController;
 use App\Http\Controllers\FunderController;
+use App\Http\Controllers\PusherController;
 use App\Http\Controllers\TradeController;
 use App\Http\Controllers\TradePairAccountsController;
 use App\Http\Controllers\TradeReportController;
@@ -142,7 +143,8 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
 Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 {
-    Route::post('test-broadcast', [TradingUnitsController::class, 'testBroadcastConnection']);
+    Route::post('pusher-auth', [PusherController::class, 'authenticateUnit']);
+//    Route::post('test-broadcast', [TradingUnitsController::class, 'testBroadcastConnection']);
 });
 
 
