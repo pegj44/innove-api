@@ -141,7 +141,7 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
     });
 });
 
-Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
+Route::middleware(['auth:sanctum'])->group(function()
 {
     Route::post('pusher-auth', [PusherController::class, 'authenticateUnit']);
 //    Route::post('test-broadcast', [TradingUnitsController::class, 'testBroadcastConnection']);
