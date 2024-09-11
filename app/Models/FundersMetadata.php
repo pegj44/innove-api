@@ -23,6 +23,9 @@ class FundersMetadata extends Model
     public static $defaultMetadata = [
         'dashboard_url',
         'platform_url',
+        'platform_type',
+        'purchase_type',
+        'pips_calculation_type',
         'evaluation_type',
         'daily_threshold',
         'daily_threshold_type',

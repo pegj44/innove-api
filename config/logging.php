@@ -126,6 +126,12 @@ return [
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],
+
+        'custom' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/custom.log'),  // Path where the logs will be stored
+            'level' => 'debug',
+        ]
     ],
 
 ];

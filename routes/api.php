@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\CalculationsController;
 use App\Http\Controllers\FunderController;
+use App\Http\Controllers\MachinesController;
 use App\Http\Controllers\PusherController;
 use App\Http\Controllers\TradeController;
 use App\Http\Controllers\TradePairAccountsController;
@@ -16,7 +17,9 @@ use App\Http\Controllers\TradingAccountCredential;
 use App\Http\Controllers\TradingIndividualsController;
 use App\Http\Controllers\TradingUnitsController;
 use App\Http\Controllers\UserEntityController;
+use App\Models\AccountsPairingJob;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -29,6 +32,8 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+
+Route::post('/token/create', [AuthenticatedSessionController::class, 'createToken']);
 
 Route::post('/auth-user', [AuthenticatedSessionController::class, 'authenticateUserToken'])->middleware(['auth:sanctum', 'ability:admin']);
 
@@ -71,8 +76,11 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 
     Route::controller(TradePairAccountsController::class)->prefix('trade/')->group(function()
     {
+//        Route::post('/starting-equity/update', 'updateStartingEquity');
+//        Route::post('/starting-equity/update/status', 'updateStartingEquityJobStatus');
         Route::post('/pair-accounts', 'pairAccounts');
         Route::get('/paired-items', 'getPairedItems');
+        Route::post('/set-account-purchase-type', 'setAccountPurchaseType');
         Route::delete('/paired-items', 'clearPairedItems');
     });
 
@@ -124,6 +132,8 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
     {
         Route::get('trade/reports', 'getReports');
         Route::post('trade/report', 'store');
+        Route::post('trade/report/latest-equity/update', 'updateLatestEquity');
+
         Route::get('trade/report/{id}', 'edit');
         Route::post('trade/report/{id}', 'update');
         Route::patch('trade/report/updateByFunderAccount', 'updateByFunderAccount');
@@ -149,20 +159,54 @@ Route::middleware(['auth:sanctum'])->group(function()
 
 
 
-Route::middleware(['auth:sanctum', 'ability:unit'])->group(function()
+Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 {
-
-
-//    Route::post('test-connection', function() {
-//        return response()->json(['test' => 1]);
-//    });
+    Route::post('register-machines', [MachinesController::class, 'registerMachines']);
+    Route::get('machines', [MachinesController::class, 'getMachines']);
+    Route::post('machine/use', [MachinesController::class, 'recordUsage']);
 });
 
+Route::post('/broadcasting/auth', function (Request $request) {
+    return Broadcast::auth($request);
+});
 
 Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 {
     Route::get('test', function()
     {
+//        $machines = MachinesController::getAvailableMachine(3, '120.28.220.253');
+
+        $items = \App\Models\TradeReport::with('tradingAccountCredential.tradingIndividual.tradingUnit', 'tradingAccountCredential.funder.metadata')
+            ->where('user_id', auth()->id())
+            ->whereHas('tradingAccountCredential', function ($query) {
+                $query->whereIn('account_id', ['14178', 'UPTN258956']);
+            })
+            ->where('status', 'idle')
+            ->get();
+
+        foreach ($items as $item) {
+            $funderMeta = $item['tradingAccountCredential']['funder']['metadata'];
+            $pipsCalculationType = '';
+            $pips = 1; // default pips
+
+            foreach ($funderMeta as $meta) {
+                if ($meta->key === 'pips_calculation_type') {
+                    $pipsCalculationType = $meta->value;
+                }
+            }
+
+            if ($pipsCalculationType === 'volume') {
+                $pips = CalculationsController::calculateVolume($item->latest_equity, 5.1);
+            }
+
+            var_dump($pips);
+        }
+
+
+
+        dd($items);
+
+
         return response()->json(['test2' => 3]);
     });
 });

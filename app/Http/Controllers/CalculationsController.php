@@ -6,25 +6,30 @@ use Illuminate\Http\Request;
 
 class CalculationsController extends Controller
 {
+    public static $percentMSL = 0.02; // as a fraction
+    public static $lotPercent = 0.8; // as a fraction
+    public static $stopLossPip = 5.1;
+
+    public static function calculateVolume($latestEquity, $stopLossPip)
+    {
+        $lotQty = $latestEquity * self::$percentMSL * self::$lotPercent / ($stopLossPip * 100);
+
+        return  self::roundUpToTwoDecimalPlaces($lotQty);
+    }
+
     public function calculateTpSl(Request $request)
     {
         $args = parseArgs($request->except('_token'), [
             'latestEquity' => 0,
             'marketPrice' => 0,
-            'stopLossPip' => 5.1
+            'stopLossPip' => self::$stopLossPip
         ]);
 
-        // Given percentages
-        $percentMSL = 2; // as a fraction
-        $lotPercent = 80; // as a fraction
-
-        // Calculate lotQty
-        $lotQty = $args['latestEquity'] * ($percentMSL / 100) * ($lotPercent / 100) / ($args['stopLossPip'] * 100);
-        $lotQty = $this->roundUpToTwoDecimalPlaces($lotQty);
+        $lotQty = self::calculateVolume($args['latestEquity'], $args['stopLossPip']);
 
         // Calculate tPTicks
         $tPTicks = $args['stopLossPip'] - 0.2;
-        $tPTicks = $this->roundUpToTwoDecimalPlaces($tPTicks);
+        $tPTicks = self::roundUpToTwoDecimalPlaces($tPTicks);
 
         // Calculate buyTp and buySL
         $buyTp = $tPTicks + $args['marketPrice'] - 0.2;
@@ -37,14 +42,19 @@ class CalculationsController extends Controller
         return [
             'lotVolume' => $lotQty,
             'takeProfitPips' => $tPTicks,
-            'buyTakeProfit' => $this->roundUpToTwoDecimalPlaces($buyTp),
-            'buyStopLoss' => $this->roundUpToTwoDecimalPlaces($buySL),
-            'sellTakeProfit' => $this->roundUpToTwoDecimalPlaces($sellTp),
-            'sellStopLoss' => $this->roundUpToTwoDecimalPlaces($sellSl)
+            'buyTakeProfit' => self::roundUpToTwoDecimalPlaces($buyTp),
+            'buyStopLoss' => self::roundUpToTwoDecimalPlaces($buySL),
+            'sellTakeProfit' => self::roundUpToTwoDecimalPlaces($sellTp),
+            'sellStopLoss' => self::roundUpToTwoDecimalPlaces($sellSl)
         ];
     }
 
-    private function roundUpToTwoDecimalPlaces($number)
+    public static function calculateTradeAmounts()
+    {
+
+    }
+
+    private static function roundUpToTwoDecimalPlaces($number)
     {
         return ceil($number * 100) / 100;
     }

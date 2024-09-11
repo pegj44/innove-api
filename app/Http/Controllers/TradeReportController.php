@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\TradePair;
 use App\Models\TradeReport;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -15,6 +16,44 @@ class TradeReportController extends Controller
             ->where('user_id', auth()->id())->get();
 
         return response()->json($items);
+    }
+
+    public function updateLatestEquity(Request $request)
+    {
+        $validator = Validator::make($request->only(['account_id', 'latest_equity']), [
+            'account_id' => ['required'],
+            'latest_equity' => ['required', 'regex:/^\d+(\.\d{1,2})?$/']
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()]);
+        }
+
+        try {
+            TradeReport::where('user_id', auth()->id())
+                ->whereHas('tradingAccountCredential', function($query) use ($request) {
+                    $query->where('account_id', $request->get('account_id'));
+                })
+                ->update(['latest_equity' => $request->get('latest_equity')]);
+
+            $machineJob = TradePairAccountsController::updateEquityUpdateStatus(auth()->id(), $request->get('account_id'), 'complete');
+            $pairedItems = TradePairAccountsController::pairItems();
+
+            info(print_r([
+                'user_id' => auth()->id(),
+                'account_id' => $request->get('account_id'),
+                'machineJob' => $machineJob,
+                'pairedItems' => $pairedItems
+            ], true));
+
+            if (!empty($pairedItems)) {
+                return response()->json($pairedItems);
+            }
+
+            return response()->json(['message' => __('Equity updated')]);
+        } catch (\Exception $e) {
+            return response()->json(['error_updateLatestEquity' => $e->getMessage()]);
+        }
     }
 
     public function store(Request $request)
@@ -131,8 +170,6 @@ class TradeReportController extends Controller
             return response()->json(['errors' => __('Error updating trade report.')]);
         }
     }
-
-
 
     public function update(Request $request, string $id)
     {

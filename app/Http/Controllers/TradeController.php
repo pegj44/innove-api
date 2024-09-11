@@ -9,10 +9,17 @@ class TradeController extends Controller
 {
     public function initiateTrade(Request $request)
     {
-        UnitsEvent::dispatch(auth()->id(), [
-            'unit1' => $request->get('unit1'),
-            'unit2' => $request->get('unit2')
-        ], 'initiate-trade');
+        info(print_r([
+            'initiateTrade' => $request->all()
+        ], true));
+
+        foreach ($request->except('_token') as $item) {
+            UnitsEvent::dispatch(auth()->id(), [
+                'latest_equity' => $item['latest_equity'],
+                'purchase_type' => $item['purchase_type']
+            ], 'initiate-trade', $item['machine'], $item['ip']);
+        }
+
         return response()->json(['message' => __('Initiating Unit')]);
     }
 }

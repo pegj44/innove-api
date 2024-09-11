@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\MachineJobs;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -13,6 +14,33 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthenticatedSessionController extends Controller
 {
+    public function createToken(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
+
+        if (Auth::attempt($request->only('email', 'password'))) {
+
+            $tokenName = env('ADMIN_TOKEN_NAME');
+            $user = Auth::user();
+
+            $token = $user->createToken($tokenName, ['admin'])->plainTextToken;
+
+            return response()->json([
+                'token' => $token,
+                'userId' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ]);
+        }
+
+        return response()->json([
+            'errors' => 'Invalid credentials'
+        ], 401);
+    }
+
     public function authenticateUserToken(Request $request)
     {
         return response()->json([
@@ -128,6 +156,8 @@ class AuthenticatedSessionController extends Controller
 
             $user = User::find($userUnit->unitUserLogin->user_id);
             $token = $user->createToken($tokenName, ['admin'])->plainTextToken;
+
+            MachineJobs::where('user_id', auth()->id())->delete(); // Reset machine usage
 
             return response()->json([
                 'token' => $token,

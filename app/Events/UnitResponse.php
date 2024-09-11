@@ -2,7 +2,6 @@
 
 namespace App\Events;
 
-use App\Http\Controllers\MachinesController;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
@@ -11,26 +10,20 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class UnitsEvent implements ShouldBroadcast
+class UnitResponse implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $action;
-    public $arguments;
     public $userId;
-    public $ip;
-    public $machine;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(int $userId, array $arguments, string $action, string $machine, string $ip)
+    public function __construct($userId, $action)
     {
         $this->action = $action;
-        $this->arguments = $arguments;
         $this->userId = $userId;
-        $this->machine = $machine;
-        $this->ip = $ip;
     }
 
     /**
@@ -40,14 +33,6 @@ class UnitsEvent implements ShouldBroadcast
      */
     public function broadcastOn(): array
     {
-//        $machine = MachinesController::getAvailableMachine($this->ip);
-//
-//        if (!$machine) {
-//            return [false];
-//        }
-//
-//        MachinesController::setMachineStatus($machine, 'active');
-
         return [
             new PrivateChannel('unit.'. $this->userId),
         ];

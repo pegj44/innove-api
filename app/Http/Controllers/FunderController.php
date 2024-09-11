@@ -75,8 +75,9 @@ class FunderController extends Controller
         return Validator::make($data, [
             'name' => ['required', 'regex:/^[a-zA-Z0-9-_ ]+$/'],
             'alias' => ['required', 'regex:/^[a-zA-Z0-9-_ ]+$/'],
-            'platform_url' => ['required', 'url'],
-            'dashboard_url' => ['required', 'url'],
+//            'platform_url' => ['required', 'url'],
+//            'dashboard_url' => ['required', 'url'],
+            'asset_type' => ['required'],
             'evaluation_type' => ['required', 'regex:/^[a-zA-Z0-9-_]+$/'],
             'daily_threshold' => ['required', 'numeric'],
             'daily_threshold_type' => ['required', 'regex:/^[a-zA-Z]+$/'],
@@ -112,6 +113,7 @@ class FunderController extends Controller
             $funder->user_id = auth()->id();
             $funder->name = $data['name'];
             $funder->alias = $data['alias'];
+            $funder->asset_type = $data['asset_type'];
             $funder->metaData = $data;
 
             $isCreated = $funder->save();
@@ -161,6 +163,7 @@ class FunderController extends Controller
                 'user_id' => $funder->user_id,
                 'name' => $funder->name,
                 'alias' => $funder->alias,
+                'asset_type' => $funder->asset_type,
                 'created_at' => $funder->created_at,
                 'updated_at' => $funder->updated_at,
                 'metadata' => $funder->metadata->pluck('value', 'key')->toArray(),
@@ -192,6 +195,7 @@ class FunderController extends Controller
 
             $funder->name = $data['name'];
             $funder->alias = $data['alias'];
+            $funder->asset_type = $data['asset_type'];
             $funder->metaData = $data;
 
             $success = $funder->update();
