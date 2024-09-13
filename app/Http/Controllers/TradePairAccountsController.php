@@ -32,7 +32,8 @@ class TradePairAccountsController extends Controller
             UnitsEvent::dispatch(
                 $user_id,
                 [
-                    'account_id' => $account['trade_credential']['account_id']
+                    'account_id' => $account['trade_credential']['account_id'],
+                    'asset_type' => $account['trade_credential']['funder']['asset_type']
                 ],
                 'update-starting-equity',
                 $account['trade_credential']['funder']['alias'] .'_'. $account['trade_credential']['account_id'],
