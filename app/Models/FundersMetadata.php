@@ -25,7 +25,6 @@ class FundersMetadata extends Model
         'platform_url',
         'platform_type',
         'purchase_type',
-        'pips_calculation_type',
         'evaluation_type',
         'daily_threshold',
         'daily_threshold_type',

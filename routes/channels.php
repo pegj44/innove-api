@@ -15,5 +15,10 @@ use Illuminate\Support\Facades\Broadcast;
 
 Broadcast::channel('unit.{id}', function ($user, $id) {
 //    return (int) $user->id === (int) $id;
+    info(print_r([
+        'broadCast2' => [
+            'id' => $id
+        ],
+    ], true));
     return true;
 });

@@ -77,7 +77,7 @@ class FunderController extends Controller
             'alias' => ['required', 'regex:/^[a-zA-Z0-9-_ ]+$/'],
 //            'platform_url' => ['required', 'url'],
 //            'dashboard_url' => ['required', 'url'],
-            'asset_type' => ['required'],
+//            'asset_type' => ['required'],
             'evaluation_type' => ['required', 'regex:/^[a-zA-Z0-9-_]+$/'],
             'daily_threshold' => ['required', 'numeric'],
             'daily_threshold_type' => ['required', 'regex:/^[a-zA-Z]+$/'],
@@ -114,6 +114,7 @@ class FunderController extends Controller
             $funder->name = $data['name'];
             $funder->alias = $data['alias'];
             $funder->asset_type = $data['asset_type'];
+            $funder->automation = $data['automation'];
             $funder->metaData = $data;
 
             $isCreated = $funder->save();
@@ -164,6 +165,7 @@ class FunderController extends Controller
                 'name' => $funder->name,
                 'alias' => $funder->alias,
                 'asset_type' => $funder->asset_type,
+                'automation' => $funder->automation,
                 'created_at' => $funder->created_at,
                 'updated_at' => $funder->updated_at,
                 'metadata' => $funder->metadata->pluck('value', 'key')->toArray(),
@@ -196,6 +198,7 @@ class FunderController extends Controller
             $funder->name = $data['name'];
             $funder->alias = $data['alias'];
             $funder->asset_type = $data['asset_type'];
+            $funder->automation = $data['automation'];
             $funder->metaData = $data;
 
             $success = $funder->update();

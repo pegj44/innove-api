@@ -39,12 +39,12 @@ class TradeReportController extends Controller
             $machineJob = TradePairAccountsController::updateEquityUpdateStatus(auth()->id(), $request->get('account_id'), 'complete');
             $pairedItems = TradePairAccountsController::pairItems();
 
-            info(print_r([
-                'user_id' => auth()->id(),
-                'account_id' => $request->get('account_id'),
-                'machineJob' => $machineJob,
-                'pairedItems' => $pairedItems
-            ], true));
+//            info(print_r([
+//                'user_id' => auth()->id(),
+//                'account_id' => $request->get('account_id'),
+//                'machineJob' => $machineJob,
+//                'pairedItems' => $pairedItems
+//            ], true));
 
             if (!empty($pairedItems)) {
                 return response()->json($pairedItems);

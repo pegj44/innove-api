@@ -27,17 +27,24 @@ class TradePairAccountsController extends Controller
 
         foreach ($accounts as $account) {
 
-            $this->updateEquityUpdateStatus($user_id, $account['trade_credential']['account_id'], 'pairing');
+            $isUnitConnected = PusherController::checkUnitConnection($user_id, $account['trade_credential']['trading_individual']['trading_unit']['ip_address']);
 
-            UnitsEvent::dispatch(
-                $user_id,
-                [
-                    'account_id' => $account['trade_credential']['account_id'],
-                    'asset_type' => $account['trade_credential']['funder']['asset_type']
-                ],
-                'update-starting-equity',
-                $account['trade_credential']['funder']['alias'] .'_'. $account['trade_credential']['account_id'],
-                $account['trade_credential']['trading_individual']['trading_unit']['ip_address']);
+            if (!$isUnitConnected) {
+                return response()->json([
+                   'error' => 'Unit with IP '. $account['trade_credential']['trading_individual']['trading_unit']['ip_address'] .' is not connected.'
+                ]);
+            } else {
+                $this->updateEquityUpdateStatus($user_id, $account['trade_credential']['account_id'], 'pairing');
+
+                UnitsEvent::dispatch(
+                    $user_id,
+                    [
+                        'account_id' => $account['trade_credential']['account_id'],
+                    ],
+                    'update-starting-equity',
+                    $account['trade_credential']['funder']['automation'],
+                    $account['trade_credential']['trading_individual']['trading_unit']['ip_address']);
+            }
         }
 
         return $accounts;
@@ -73,31 +80,38 @@ class TradePairAccountsController extends Controller
             ->toArray();
     }
 
-    public function setAccountPurchaseType(Request $request)
+    public function updateTradeSettings(Request $request)
     {
-        $funderMeta = FundersMetadata::where('funder_id', $request->get('funder_id'))
-            ->where('key', 'purchase_type')->first();
-info(print_r([
-    'funderMetadata' => $funderMeta
-], true));
-        if ($funderMeta) {
-            $funderMeta->value = [$request->get('purchase_type')];
-            $updated = $funderMeta->update();
+        $tradeReport = TradeReport::where('id', $request->get('trade_report_id'))->first();
 
-            info(print_r([
-                'request' => $request->all(),
-                'isUpdated' => $updated
-            ], true));
-        } else {
-            $funderMeta = new FundersMetadata();
-            $funderMeta->funder_id = $request->get('funder_id');
-            $funderMeta->key = 'purchase_type';
-            $funderMeta->value = [$request->get('purchase_type')];
-            $funderMeta->save();
+        if (empty($tradeReport)) {
+            return response()->json(['error' => __('Trade report item not found.')]);
+        }
+
+        $args = parseArgs($request->except('_token'), [
+            'order_amount' => 1,
+            'stop_loss_ticks' => 1,
+            'take_profit_ticks' => 1
+        ]);
+
+        $tradeReport->purchase_type = $args['purchase_type'];
+        $tradeReport->order_amount = $args['order_amount'];
+        $tradeReport->stop_loss_ticks = $args['stop_loss_ticks'];
+        $tradeReport->take_profit_ticks = $args['take_profit_ticks'];
+        $tradeReport->update();
+
+        if ($request->get('trade_report_pair_id') !== null) {
+            $tradeReportPair = TradeReport::where('id', $request->get('trade_report_pair_id'))->first();
+
+            if (!empty($tradeReportPair)) {
+                $purchaseType = ($request->get('purchase_type') === 'sell')? 'buy' : 'sell';
+                $tradeReportPair->purchase_type = $purchaseType;
+                $tradeReportPair->update();
+            }
         }
 
         return response()->json([
-            'received_data' => $request->all()
+            '$tradeReport' => $tradeReport
         ]);
     }
 
@@ -136,7 +150,7 @@ info(print_r([
             ->get();
 
         if ($pairingItems->isNotEmpty()) {
-//            UnitResponse::dispatch(auth()->id(), 'pair_accounts-failed');
+            UnitResponse::dispatch(auth()->id(), 'pairing....');
             return false;
         }
 
@@ -161,14 +175,11 @@ info(print_r([
                 if (!self::matchByPhase($item1, $item2)) continue;
 
                 $distance = self::matchByPnL($item1, $item2);
-                info(print_r([
-                    '$distance' => $distance,
-                    '$closest_distance' => $closest_distance
-                ], true));
-                if ($distance < $closest_distance) {
+
+//                if ($distance < $closest_distance) {
                     $closest_index = $j;
                     $closest_distance = $distance;
-                }
+//                }
             }
 
             if ($closest_index !== null) {
@@ -182,6 +193,8 @@ info(print_r([
             self::savePairedItems($paired);
 
             UnitResponse::dispatch(auth()->id(), 'pair_accounts-success');
+        } else {
+            UnitResponse::dispatch(auth()->id(), 'no-pairable-accounts');
         }
 
         return $paired;
@@ -216,6 +229,9 @@ info(print_r([
                 'created_at' => $currentTime,
                 'updated_at' => $currentTime
             ];
+
+            TradeReport::where('id', $item[0]['id'])->update(['purchase_type' => 'buy']);
+            TradeReport::where('id', $item[1]['id'])->update(['purchase_type' => 'sell']);
         }
 
         $existingItems = PairedItems::whereIn('pair_1', array_column($pairedItems, 'pair_1'))

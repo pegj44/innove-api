@@ -18,6 +18,9 @@ use App\Http\Controllers\TradingIndividualsController;
 use App\Http\Controllers\TradingUnitsController;
 use App\Http\Controllers\UserEntityController;
 use App\Models\AccountsPairingJob;
+use App\Models\FundersMetadata;
+use App\Models\TradingUnitQueueModel;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
@@ -80,7 +83,7 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 //        Route::post('/starting-equity/update/status', 'updateStartingEquityJobStatus');
         Route::post('/pair-accounts', 'pairAccounts');
         Route::get('/paired-items', 'getPairedItems');
-        Route::post('/set-account-purchase-type', 'setAccountPurchaseType');
+        Route::post('/update-trade-report-settings', 'updateTradeSettings');
         Route::delete('/paired-items', 'clearPairedItems');
     });
 
@@ -143,6 +146,7 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
     Route::controller(TradeController::class)->group(function()
     {
         Route::post('trade/initiate', 'initiateTrade');
+        Route::post('trade/unit-ready', 'unitReady');
     });
 
     Route::controller(CalculationsController::class)->prefix('calculate')->group(function()
@@ -176,36 +180,39 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
     {
 //        $machines = MachinesController::getAvailableMachine(3, '120.28.220.253');
 
-        $items = \App\Models\TradeReport::with('tradingAccountCredential.tradingIndividual.tradingUnit', 'tradingAccountCredential.funder.metadata')
-            ->where('user_id', auth()->id())
-            ->whereHas('tradingAccountCredential', function ($query) {
-                $query->whereIn('account_id', ['14178', 'UPTN258956']);
-            })
-            ->where('status', 'idle')
-            ->get();
+//        $items = \App\Models\TradeReport::with('tradingAccountCredential.tradingIndividual.tradingUnit', 'tradingAccountCredential.funder.metadata')
+//            ->where('user_id', auth()->id())
+//            ->whereHas('tradingAccountCredential', function ($query) {
+//                $query->whereIn('account_id', ['14178', 'UPTN258956']);
+//            })
+//            ->where('status', 'idle')
+//            ->get();
+//
+//        foreach ($items as $item) {
+//            $funderMeta = $item['tradingAccountCredential']['funder']['metadata'];
+//            $pipsCalculationType = '';
+//            $pips = 1; // default pips
+//
+//            foreach ($funderMeta as $meta) {
+//                if ($meta->key === 'pips_calculation_type') {
+//                    $pipsCalculationType = $meta->value;
+//                }
+//            }
+//
+//            if ($pipsCalculationType === 'volume') {
+//                $pips = CalculationsController::calculateVolume($item->latest_equity, 5.1);
+//            }
+//
+//            var_dump($pips);
+//        }
 
-        foreach ($items as $item) {
-            $funderMeta = $item['tradingAccountCredential']['funder']['metadata'];
-            $pipsCalculationType = '';
-            $pips = 1; // default pips
 
-            foreach ($funderMeta as $meta) {
-                if ($meta->key === 'pips_calculation_type') {
-                    $pipsCalculationType = $meta->value;
-                }
-            }
+//        $funderMeta = FundersMetadata::where('funder_id', 15)
+//            ->where('key', 'purchase_type')->first();
 
-            if ($pipsCalculationType === 'volume') {
-                $pips = CalculationsController::calculateVolume($item->latest_equity, 5.1);
-            }
+        $queues = TradingUnitQueueModel::where('user_id', auth()->id())->get();
 
-            var_dump($pips);
-        }
-
-
-
-        dd($items);
-
+        dd($queues);
 
         return response()->json(['test2' => 3]);
     });

@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use App\Http\Controllers\MachinesController;
+use App\Http\Controllers\PusherController;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
@@ -40,16 +41,8 @@ class UnitsEvent implements ShouldBroadcast
      */
     public function broadcastOn(): array
     {
-//        $machine = MachinesController::getAvailableMachine($this->ip);
-//
-//        if (!$machine) {
-//            return [false];
-//        }
-//
-//        MachinesController::setMachineStatus($machine, 'active');
-
         return [
-            new PrivateChannel('unit.'. $this->userId),
+            new PrivateChannel('unit.'. $this->userId .'.'. $this->ip),
         ];
     }
 }

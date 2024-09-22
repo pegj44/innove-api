@@ -20,4 +20,29 @@ class PusherController extends Controller
 
         return response($auth);
     }
+
+    public static function checkUnitConnection($userId, $unitIp)
+    {
+        $pusher = new Pusher(
+            env('PUSHER_APP_KEY'),
+            env('PUSHER_APP_SECRET'),
+            env('PUSHER_APP_ID'),
+            ['cluster' => env('PUSHER_APP_CLUSTER'), 'useTLS' => true]
+        );
+
+        $channelName = 'private-unit.'. $userId .'.'. $unitIp;
+
+        try {
+            $channelInfo = $pusher->getChannelInfo($channelName, []);
+
+            return $channelInfo->occupied;
+
+        } catch (Exception $e) {
+            info(print_r([
+                'checkConnectionError' => 'Error fetching channel info: ' . $e->getMessage()
+            ], true));
+
+            return false;
+        }
+    }
 }

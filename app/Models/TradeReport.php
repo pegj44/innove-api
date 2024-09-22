@@ -18,7 +18,16 @@ class TradeReport extends Model
         'starting_equity',
         'latest_equity',
         'status',
-        'remarks'
+        'remarks',
+        'purchase_type',
+        'order_type',
+        'order_amount',
+        'stop_loss_ticks',
+        'take_profit_ticks',
+    ];
+
+    protected $attributes = [
+        'purchase_type' => '',
     ];
 
     public function user()
