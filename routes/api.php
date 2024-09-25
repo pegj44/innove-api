@@ -210,9 +210,9 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 //        $funderMeta = FundersMetadata::where('funder_id', 15)
 //            ->where('key', 'purchase_type')->first();
 
-        $queues = TradingUnitQueueModel::where('user_id', auth()->id())->get();
+        $output = TradePairAccountsController::getCalculatedOrderAmount('300', 'fixed', '30400', '30400', 'currency');
 
-        dd($queues);
+        dd($output);
 
         return response()->json(['test2' => 3]);
     });

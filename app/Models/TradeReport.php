@@ -27,7 +27,12 @@ class TradeReport extends Model
     ];
 
     protected $attributes = [
+        'remarks' => '',
         'purchase_type' => '',
+        'order_type' => '',
+        'order_amount' => '',
+        'stop_loss_ticks' => '',
+        'take_profit_ticks' => '',
     ];
 
     public function user()

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Events\UnitsEvent;
+use App\Models\PairedItems;
 use App\Models\TradingUnitQueueModel;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -56,31 +57,37 @@ class TradeController extends Controller
     public function initiateTrade(Request $request)
     {
         $queueId = $this->generateQueueId();
+        $data = $request->except('_token');
+//
+//        foreach ($data as $item) {
+//
+//            $isUnitConnected = PusherController::checkUnitConnection(auth()->id(), $item['ip']);
+//
+//            if (!$isUnitConnected) {
+//                return response()->json([
+//                    'error' => 'Unit with IP '. $item['ip'] .' is not connected.'
+//                ]);
+//            } else {
+//
+//                UnitsEvent::dispatch(auth()->id(), [
+//                    'account_id' => $item['account_id'],
+//                    'latest_equity' => $item['latest_equity'],
+//                    'purchase_type' => $item['purchase_type'],
+//                    'order_amount' => $item['order_amount'],
+//                    'take_profit_ticks' => $item['take_profit_ticks'],
+//                    'stop_loss_ticks' => $item['stop_loss_ticks'],
+//                    'queue_id' => $queueId,
+//                    'machine' => $item['machine'],
+//                    'ip_address' => $item['ip']
+//                ], 'initiate-trade', $item['machine'], $item['ip']);
+//            }
+//        }
 
-        foreach ($request->except('_token') as $item) {
+        $pairedItems = PairedItems::where('id', $data['paired_id'])
+            ->where('user_id', auth()->id())->first();
 
-            $isUnitConnected = PusherController::checkUnitConnection(auth()->id(), $item['ip']);
-
-            if (!$isUnitConnected) {
-                return response()->json([
-                    'error' => 'Unit with IP '. $item['ip'] .' is not connected.'
-                ]);
-            } else {
-
-                UnitsEvent::dispatch(auth()->id(), [
-                    'account_id' => $item['account_id'],
-                    'latest_equity' => $item['latest_equity'],
-                    'purchase_type' => $item['purchase_type'],
-                    'order_amount' => $item['order_amount'],
-                    'take_profit_ticks' => $item['take_profit_ticks'],
-                    'stop_loss_ticks' => $item['stop_loss_ticks'],
-                    'asset_type' => $item['asset_type'],
-                    'queue_id' => $queueId,
-                    'machine' => $item['machine'],
-                    'ip_address' => $item['ip']
-                ], 'initiate-trade', $item['machine'], $item['ip']);
-            }
-        }
+        $pairedItems->status = 'trading';
+        $pairedItems->update();
 
         return response()->json(['message' => __('Initiating unit trade.')]);
     }

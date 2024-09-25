@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\TradeReport;
 use Illuminate\Http\Request;
 use App\Models\TradingAccountCredential as TradingAccountCredentialModel;
 use Illuminate\Support\Facades\Validator;
@@ -51,6 +52,16 @@ class TradingAccountCredential extends Controller
                 return response()->json(['errors' => __('Failed to create the credential.')]);
             }
 
+            $tradeReport = new TradeReport();
+            $tradeReport->user_id = auth()->id();
+            $tradeReport->trade_account_credential_id = $credential->id;
+            $tradeReport->starting_balance = $request->get('starting_balance');
+            $tradeReport->starting_equity = $request->get('starting_balance');
+            $tradeReport->latest_equity = $request->get('starting_balance');
+            $tradeReport->order_type = '';
+            $tradeReport->status = 'idle';
+            $tradeReport->save();
+
             return response()->json(['message' => __('Successfully created credential.')]);
 
         } catch (\Exception $e) {
@@ -68,6 +79,8 @@ class TradingAccountCredential extends Controller
             'trading_individual_id' => ['required', 'numeric'],
             'funder_id' => ['required', 'numeric'],
             'account_id' => ['required'],
+            'account_type' => ['required'],
+            'starting_balance' => ['required'],
             'phase' => ['required'],
             'status' => ['required']
         ];

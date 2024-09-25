@@ -13,41 +13,62 @@ use Illuminate\Http\Request;
 
 class TradePairAccountsController extends Controller
 {
+    public static $takeProfitTicks = 49;
+    public static $stopLossTicks = 51;
+
     public function pairAccounts(Request $request)
     {
-        $accounts = self::getTradableAccounts();
+        $items = self::getTradableAccounts();
 
-        if (empty($accounts)) {
-            return response()->json(['message' => 'No available accounts to trade']);
+        if (empty($items)) {
+            return response()->json([
+                'data' => [],
+                'message' => __('No available accounts to trade.')
+            ]);
         }
 
-        $user_id = auth()->id();
+        $paired = [];
+        $used_indices = [];
 
-        AccountsPairingJob::where('user_id', $user_id)->delete(); // Reset record
+        foreach ($items as $i => $item1) {
+            if (self::isBreached($item1)) continue;
+            if (self::isAbstained($item1)) continue;
+            if (in_array($i, $used_indices)) continue;
 
-        foreach ($accounts as $account) {
+            $closest_index = null;
+            $closest_distance = PHP_FLOAT_MAX;
 
-            $isUnitConnected = PusherController::checkUnitConnection($user_id, $account['trade_credential']['trading_individual']['trading_unit']['ip_address']);
+            foreach ($items as $j => $item2) {
+                if (self::isBreached($item2)) continue;
+                if (self::isAbstained($item2)) continue;
+                if ($i == $j || in_array($j, $used_indices)) continue;
+                if (!self::matchByPhase($item1, $item2)) continue;
 
-            if (!$isUnitConnected) {
-                return response()->json([
-                   'error' => 'Unit with IP '. $account['trade_credential']['trading_individual']['trading_unit']['ip_address'] .' is not connected.'
-                ]);
-            } else {
-                $this->updateEquityUpdateStatus($user_id, $account['trade_credential']['account_id'], 'pairing');
+                $distance = self::matchByPnL($item1, $item2);
 
-                UnitsEvent::dispatch(
-                    $user_id,
-                    [
-                        'account_id' => $account['trade_credential']['account_id'],
-                    ],
-                    'update-starting-equity',
-                    $account['trade_credential']['funder']['automation'],
-                    $account['trade_credential']['trading_individual']['trading_unit']['ip_address']);
+                if ($distance < $closest_distance) {
+                    $closest_index = $j;
+                    $closest_distance = $distance;
+                }
+            }
+
+            if ($closest_index !== null) {
+                $paired[] = [$item1, $items[$closest_index]];
+                $used_indices[] = $i;
+                $used_indices[] = $closest_index;
             }
         }
 
-        return $accounts;
+        if (empty($paired)) {
+            return response()->json([
+                'data' => [],
+                'message' => __('No matching accounts found.')
+            ]);
+        }
+
+        self::savePairedItems($paired);
+
+        return response()->json(['message' => '', 'data' => $paired]);
     }
 
     public static function updateEquityUpdateStatus($user_id, $account_id, $status)
@@ -127,78 +148,44 @@ class TradePairAccountsController extends Controller
 
     private static function matchByPnL($item1, $item2)
     {
-        $pnl1 = self::calculatePnL($item1);
-        $pnl2 = self::calculatePnL($item2);
 
-        if (($pnl1 > 0 && $pnl2 > 0) || ($pnl1 < 0 && $pnl2 < 0)) {
-            $distance = abs($pnl1 - $pnl2) + abs(floatval($item1['latest_equity']) - floatval($item2['latest_equity']));
-        } else {
-            $distance = PHP_FLOAT_MAX;
-        }
-
-        if ($pnl1 == 0 || $pnl2 == 0) {
-            $distance = abs(floatval($item1['latest_equity']) - floatval($item2['latest_equity'])) + abs(floatval($item1['starting_balance']) - floatval($item2['starting_balance']));
-        }
-
-        return $distance;
     }
 
-    public static function pairItems()
+    private static function matchByTargetProfit($item1, $item2)
     {
-        $pairingItems = AccountsPairingJob::where('user_id', auth()->id())
-            ->where('status', 'pairing')
-            ->get();
 
-        if ($pairingItems->isNotEmpty()) {
-            UnitResponse::dispatch(auth()->id(), 'pairing....');
-            return false;
-        }
-
-        $items = self::getTradableAccounts();
-
-        if (empty($items)) {
-            UnitResponse::dispatch(auth()->id(), 'no-pairable-accounts');
-            return false;
-        }
-
-        $paired = [];
-        $used_indices = [];
-
-        foreach ($items as $i => $item1) {
-            if (in_array($i, $used_indices)) continue;
-
-            $closest_index = null;
-            $closest_distance = PHP_FLOAT_MAX;
-
-            foreach ($items as $j => $item2) {
-                if ($i == $j || in_array($j, $used_indices)) continue;
-                if (!self::matchByPhase($item1, $item2)) continue;
-
-                $distance = self::matchByPnL($item1, $item2);
-
-//                if ($distance < $closest_distance) {
-                    $closest_index = $j;
-                    $closest_distance = $distance;
-//                }
-            }
-
-            if ($closest_index !== null) {
-                $paired[] = [$item1, $items[$closest_index]];
-                $used_indices[] = $i;
-                $used_indices[] = $closest_index;
-            }
-        }
-
-        if (!empty($paired)) {
-            self::savePairedItems($paired);
-
-            UnitResponse::dispatch(auth()->id(), 'pair_accounts-success');
-        } else {
-            UnitResponse::dispatch(auth()->id(), 'no-pairable-accounts');
-        }
-
-        return $paired;
     }
+
+    private static function isAbstained($item)
+    {
+        return false;
+    }
+
+    private static function isBreached($item)
+    {
+        info(print_r([
+            'isBreached' => $item
+        ], true));
+        return false;
+    }
+
+//    private static function matchByPnL($item1, $item2)
+//    {
+//        $pnl1 = self::calculatePnL($item1);
+//        $pnl2 = self::calculatePnL($item2);
+//
+//        if (($pnl1 > 0 && $pnl2 > 0) || ($pnl1 < 0 && $pnl2 < 0)) {
+//            $distance = abs($pnl1 - $pnl2) + abs(floatval($item1['latest_equity']) - floatval($item2['latest_equity']));
+//        } else {
+//            $distance = PHP_FLOAT_MAX;
+//        }
+//
+//        if ($pnl1 == 0 || $pnl2 == 0) {
+//            $distance = abs(floatval($item1['latest_equity']) - floatval($item2['latest_equity'])) + abs(floatval($item1['starting_balance']) - floatval($item2['starting_balance']));
+//        }
+//
+//        return $distance;
+//    }
 
     public function getPairedItems()
     {
@@ -214,7 +201,7 @@ class TradePairAccountsController extends Controller
         return response()->json($pairedItems);
     }
 
-    public static function savePairedItems($items)
+    private static function savePairedItems($items)
     {
         $pairedItems = [];
         $userId = auth()->id();
@@ -230,8 +217,31 @@ class TradePairAccountsController extends Controller
                 'updated_at' => $currentTime
             ];
 
-            TradeReport::where('id', $item[0]['id'])->update(['purchase_type' => 'buy']);
-            TradeReport::where('id', $item[1]['id'])->update(['purchase_type' => 'sell']);
+            $itemMetadata1 = [];
+            $itemMetadata2 = [];
+
+            foreach ($item[0]['trade_credential']['funder']['metadata'] as $funderMeta) {
+                $itemMetadata1[$funderMeta['key']] = $funderMeta['value'];
+            }
+
+            foreach ($item[1]['trade_credential']['funder']['metadata'] as $funderMeta) {
+                $itemMetadata2[$funderMeta['key']] = $funderMeta['value'];
+            }
+
+            TradeReport::where('id', $item[0]['id'])->update([
+                'order_amount' => self::getCalculatedOrderAmount($itemMetadata1['consistency_rule'], $itemMetadata1['consistency_rule_type'], $item[0]['latest_equity'], $item[0]['starting_balance']),
+                'take_profit_ticks' => 49,
+                'stop_loss_ticks' => 51,
+                'status' => 'pairing',
+                'purchase_type' => 'buy',
+            ]);
+            TradeReport::where('id', $item[1]['id'])->update([
+                'order_amount' => self::getCalculatedOrderAmount($itemMetadata2['consistency_rule'], $itemMetadata2['consistency_rule_type'], $item[1]['latest_equity'], $item[1]['starting_balance']),
+                'take_profit_ticks' => 49,
+                'stop_loss_ticks' => 51,
+                'status' => 'pairing',
+                'purchase_type' => 'sell'
+            ]);
         }
 
         $existingItems = PairedItems::whereIn('pair_1', array_column($pairedItems, 'pair_1'))
@@ -251,10 +261,41 @@ class TradePairAccountsController extends Controller
         PairedItems::insert($filteredData);
     }
 
+    public static function getCalculatedOrderAmount($consistencyRule, $consistencyRuleType, $latestEquity, $startingEquity, $outputType = 'ticks')
+    {
+        $consistencyRule = (integer) $consistencyRule;
+        $latestEquity = (integer) $latestEquity;
+        $startingEquity = (integer) $startingEquity;
+
+        $consistencyAmount = ($consistencyRuleType === 'fixed')? $consistencyRule : ($consistencyRule / 100) * $startingEquity;
+        $idealAmount = $startingEquity + $consistencyAmount;
+        $takeProfit = $consistencyAmount;
+
+        if ($latestEquity > $startingEquity && $latestEquity < $idealAmount) {
+            $takeProfit = $idealAmount - $latestEquity;
+        }
+
+        if ($outputType === 'ticks') {
+            return floor($takeProfit / self::$takeProfitTicks);
+        }
+
+        return $takeProfit;
+    }
+
     public function clearPairedItems()
     {
-        $pairedItems = PairedItems::where('user_id', auth()->id());
-        $pairedItems->delete();
+        PairedItems::where('user_id', auth()->id())
+            ->where('status', 'paired')
+            ->delete();
+
+        $pairingItems = TradeReport::where('user_id', auth()->id())
+            ->where('status', 'pairing')
+            ->get();
+
+        foreach ($pairingItems as $item) {
+            $item->status = 'idle';
+            $item->update();
+        }
 
         return response()->json(['message' => __('Successfully cleared items.')]);
     }

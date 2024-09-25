@@ -146,7 +146,7 @@ class AuthenticatedSessionController extends Controller
 
             if (!$hasUnit) {
                 return response()->json([
-                    'errors' => 'The IP: '. $request->get('ip') .' is not registered.'
+                    'errors' => 'This computer is not registered.'
                 ], 401);
             }
 
