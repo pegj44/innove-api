@@ -17,6 +17,8 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->onDelete('cascade');
+            $table->boolean('is_owner')->default(false);
             $table->rememberToken();
             $table->timestamps();
         });
@@ -27,6 +29,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropForeign(['account_id']);
+            $table->dropColumn(['account_id', 'is_owner']);
+        });
         Schema::dropIfExists('users');
     }
 };

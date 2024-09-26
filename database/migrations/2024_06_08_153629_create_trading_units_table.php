@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('trading_units', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id');
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-            $table->string('ip_address');
+            $table->unsignedBigInteger('account_id');
+            $table->foreign('account_id')->references('id')->on('users')->onDelete('cascade');
+            $table->string('unit_id');
             $table->string('name');
             $table->integer('status');
             $table->timestamps();

@@ -210,10 +210,24 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 //        $funderMeta = FundersMetadata::where('funder_id', 15)
 //            ->where('key', 'purchase_type')->first();
 
-        $output = TradePairAccountsController::getCalculatedOrderAmount('300', 'fixed', '30400', '30400', 'currency');
+//        $output = TradePairAccountsController::getCalculatedOrderAmount('300', 'fixed', '30400', '30400', 'currency');
 
-        dd($output);
+//        dd($output);
+
+//        \App\Models\Funder::where('user_id', auth()->id())->delete();
+
+        dd(auth()->user()->account_id);
 
         return response()->json(['test2' => 3]);
     });
 });
+
+
+//Route::post('create-permission', function()
+//{
+//    $role = \Spatie\Permission\Models\Role::create(['name' => 'unit']);
+//    $permission = \Spatie\Permission\Models\Permission::create(['name' => 'unit']);
+//
+//    $role->givePermissionTo($permission);
+//    $permission->assignRole($role);
+//});

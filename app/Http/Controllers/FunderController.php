@@ -16,15 +16,17 @@ class FunderController extends Controller
     public function list()
     {
         $funders = Funder::with('metadata')
-            ->where('user_id', auth()->id())
+            ->where('account_id', auth()->user()->account_id)
             ->get();
 
         $fundersWithMetadata = $funders->map(function ($funder) {
             return [
                 'id' => $funder->id,
-                'user_id' => $funder->user_id,
+                'account_id' => $funder->account_id,
                 'name' => $funder->name,
                 'alias' => $funder->alias,
+                'reset_time' => $funder->reset_time,
+                'reset_time_zone' => $funder->reset_time_zone,
                 'created_at' => $funder->created_at,
                 'updated_at' => $funder->updated_at,
                 'metadata' => $funder->metadata->pluck('value', 'key')->toArray(),
@@ -71,27 +73,11 @@ class FunderController extends Controller
             return in_array($value, timezone_identifiers_list());
         }, 'The :attribute is not a valid timezone.');
 
-
         return Validator::make($data, [
             'name' => ['required', 'regex:/^[a-zA-Z0-9-_ ]+$/'],
             'alias' => ['required', 'regex:/^[a-zA-Z0-9-_ ]+$/'],
-//            'platform_url' => ['required', 'url'],
-//            'dashboard_url' => ['required', 'url'],
-//            'asset_type' => ['required'],
-            'automation' => ['required'],
-            'evaluation_type' => ['required', 'regex:/^[a-zA-Z0-9-_]+$/'],
-            'daily_threshold' => ['required', 'numeric'],
-            'daily_threshold_type' => ['required', 'regex:/^[a-zA-Z]+$/'],
-            'max_drawdown' => ['required', 'numeric'],
-            'max_drawdown_type' => ['required', 'regex:/^[a-zA-Z]+$/'],
-            'phase_one_target_profit' => ['required', 'numeric'],
-            'phase_one_target_profit_type' => ['required', 'regex:/^[a-zA-Z]+$/'],
-            'phase_two_target_profit' => ['required', 'numeric'],
-            'phase_two_target_profit_type' => ['required', 'regex:/^[a-zA-Z]+$/'],
-            'consistency_rule' => ['numeric'],
-            'consistency_rule_type' => ['regex:/^[a-zA-Z]+$/'],
-            'reset_time' => 'valid_time',
-            'reset_time_zone' => 'valid_timezone'
+            'reset_time' => ['required', 'valid_time'],
+            'reset_time_zone' => ['required', 'valid_timezone']
         ]);
     }
 
@@ -103,7 +89,6 @@ class FunderController extends Controller
         try {
 
             $data = $request->except('_token');
-
             $validator = $this->validateInput($data);
 
             if ($validator->fails()) {
@@ -111,11 +96,11 @@ class FunderController extends Controller
             }
 
             $funder = new Funder();
-            $funder->user_id = auth()->id();
+            $funder->account_id = auth()->user()->account_id;
             $funder->name = $data['name'];
             $funder->alias = $data['alias'];
-//            $funder->asset_type = $data['asset_type'];
-            $funder->automation = $data['automation'];
+            $funder->reset_time = $data['reset_time'];
+            $funder->reset_time_zone = $data['reset_time_zone'];
             $funder->metaData = $data;
 
             $isCreated = $funder->save();
@@ -156,17 +141,17 @@ class FunderController extends Controller
     {
         $funders = Funder::with('metadata')
             ->where('id', $id)
-            ->where('user_id', auth()->id())
+            ->where('account_id', auth()->user()->account_id)
             ->get();
 
         $fundersWithMetadata = $funders->map(function ($funder) {
             return [
                 'id' => $funder->id,
-                'user_id' => $funder->user_id,
+                'account_id' => $funder->account_id,
                 'name' => $funder->name,
                 'alias' => $funder->alias,
-//                'asset_type' => $funder->asset_type,
-                'automation' => $funder->automation,
+                'reset_time' => $funder->reset_time,
+                'reset_time_zone' => $funder->reset_time_zone,
                 'created_at' => $funder->created_at,
                 'updated_at' => $funder->updated_at,
                 'metadata' => $funder->metadata->pluck('value', 'key')->toArray(),
@@ -194,12 +179,12 @@ class FunderController extends Controller
                 return response()->json(['validation_error' => $validator->errors()], 422);
             }
 
-            $funder = Funder::where('id', $id)->where('user_id', auth()->id())->first();
+            $funder = Funder::where('id', $id)->where('account_id', auth()->user()->account_id)->first();
 
             $funder->name = $data['name'];
             $funder->alias = $data['alias'];
-//            $funder->asset_type = $data['asset_type'];
-            $funder->automation = $data['automation'];
+            $funder->reset_time = $data['reset_time'];
+            $funder->reset_time_zone = $data['reset_time_zone'];
             $funder->metaData = $data;
 
             $success = $funder->update();
@@ -226,7 +211,7 @@ class FunderController extends Controller
     public function destroy(string $id)
     {
         try {
-            $funder = Funder::where('id', $id)->where('user_id', auth()->id())->first();
+            $funder = Funder::where('id', $id)->where('account_id', auth()->user()->account_id)->first();
 
             if (!$funder) {
                 return response()->json(['errors' => 'Failed to remove Funder.']);

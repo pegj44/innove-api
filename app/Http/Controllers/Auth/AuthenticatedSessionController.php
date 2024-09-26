@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\MachineJobs;
+use App\Models\TradingUnitsModel;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -72,7 +73,7 @@ class AuthenticatedSessionController extends Controller
             $user = Auth::user();
 //            $this->revokeToken($user->id, $tokenName);
 
-            $token = $user->createToken($tokenName, ['admin'])->plainTextToken;
+            $token = $user->createToken($tokenName, ['unit'])->plainTextToken;
 
             return response()->json([
                 'token' => $token,
@@ -108,21 +109,9 @@ class AuthenticatedSessionController extends Controller
         if (Auth::attempt($loginData)) {
 
             $tokenName = env('UNIT_TOKEN_NAME');
-//            $user = Auth::user();
+            $userUnits = auth()->user()->account->units()->get();
 
-            $userUnits = User::with('unitUserLogin.user.units')
-                ->where('id', auth()->id())
-                ->first();
-
-            if (empty($userUnits)) {
-                return response()->json([
-                    'errors' => 'No units registered to this account.'
-                ], 401);
-            }
-
-            $userUnits = $userUnits->toArray();
-
-            if (empty($userUnits['unit_user_login']['user']['units'])) {
+            if (!$userUnits->isNotEmpty()) {
                 return response()->json([
                     'errors' => 'No units registered to this account.'
                 ], 401);
@@ -130,12 +119,12 @@ class AuthenticatedSessionController extends Controller
 
             $hasUnit = false;
 
-            foreach ($userUnits['unit_user_login']['user']['units'] as $unit) {
-                if ($unit['ip_address'] === $request->get('ip')) {
+            foreach ($userUnits->toArray() as $unit) {
+                if ($unit['unit_id'] === $request->get('unit_id')) {
 
                     if (!$unit['status']) {
                         return response()->json([
-                            'errors' => 'The unit '. $request->get('ip') .' is deactivated.'
+                            'errors' => 'The unit '. $request->get('unit_id') .' is deactivated.'
                         ], 401);
                     }
 
@@ -150,21 +139,16 @@ class AuthenticatedSessionController extends Controller
                 ], 401);
             }
 
-            $userUnit = \App\Models\User::with('unitUserLogin')
-                ->where('id', auth()->id())
-                ->first();
+            $token = auth()->user()->createToken($tokenName, ['unit'])->plainTextToken;
 
-            $user = User::find($userUnit->unitUserLogin->user_id);
-            $token = $user->createToken($tokenName, ['admin'])->plainTextToken;
-
-            MachineJobs::where('user_id', auth()->id())->delete(); // Reset machine usage
+//            MachineJobs::where('user_id', auth()->id())->delete(); // Reset machine usage
 
             return response()->json([
                 'token' => $token,
-                'userId' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'ip' => $request->get('ip')
+                'userId' => auth()->id(),
+                'name' => auth()->user()->name,
+                'email' => auth()->user()->email,
+                'ip' => $request->get('unit_id')
             ]);
         }
 
@@ -172,85 +156,6 @@ class AuthenticatedSessionController extends Controller
             'errors' => 'Invalid unit login.'
         ], 401);
     }
-
-//    public function loginUnit(Request $request)
-//    {
-//        $validator = Validator::make($request->only(['username', 'password']), [
-//            'username' => 'required',
-//            'password' => 'required',
-//        ]);
-//
-//        if ($validator->fails()) {
-//            return response()->json([
-//                'errors' => __('Login validation failed.')
-//            ], 401);
-//        }
-//
-//        $loginData = $request->only('username', 'password');
-//        $loginData['email'] = $request->get('username') .'@innovetechsolutions.rpahandler';
-//
-//        unset($loginData['username']);
-//
-//        if (Auth::attempt($loginData)) {
-//
-//                $tokenName = env('UNIT_TOKEN_NAME');
-//                $user = Auth::user();
-//
-//                $userUnits = User::with('unitUserLogin.user.units')
-//                    ->where('id', auth()->id())
-//                    ->first();
-//
-//                if (empty($userUnits)) {
-//                    return response()->json([
-//                        'errors' => 'No units registered to this account.'
-//                    ], 401);
-//                }
-//
-//                $userUnits = $userUnits->toArray();
-//
-//                if (empty($userUnits['unit_user_login']['user']['units'])) {
-//                    return response()->json([
-//                        'errors' => 'No units registered to this account.'
-//                    ], 401);
-//                }
-//
-//                $hasUnit = false;
-//
-//                foreach ($userUnits['unit_user_login']['user']['units'] as $unit) {
-//                    if ($unit['ip_address'] === $request->get('ip')) {
-//
-//                        if (!$unit['status']) {
-//                            return response()->json([
-//                                'errors' => 'The unit '. $request->get('ip') .' is deactivated.'
-//                            ], 401);
-//                        }
-//
-//                        $hasUnit = true;
-//                        break;
-//                    }
-//                }
-//
-//                if (!$hasUnit) {
-//                    return response()->json([
-//                        'errors' => 'The IP: '. $request->get('ip') .' is not registered.'
-//                    ], 401);
-//                }
-//
-//                $token = $user->createToken($tokenName, ['unit'])->plainTextToken;
-//
-//                return response()->json([
-//                    'token' => $token,
-//                    'userId' => $user->id,
-//                    'name' => $user->name,
-//                    'email' => $user->email,
-//                    'ip' => $request->get('ip')
-//                ]);
-//        }
-//
-//        return response()->json([
-//            'errors' => 'Invalid unit login.'
-//        ], 401);
-//    }
 
     private function revokeToken($userId, $tokenName)
     {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\AccountModel;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
@@ -29,11 +30,28 @@ class RegisteredUserController extends Controller
                 'password' => ['required', 'confirmed', Rules\Password::defaults()],
             ]);
 
-            $user = User::create([
+            $userData = [
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
-            ]);
+            ];
+
+            if (empty($request->get('account_id'))) {
+                $account = AccountModel::create(['name' => $request->get('email')]);
+                $userData['account_id'] = $account->id;
+                $userData['is_owner'] = true;
+            } else {
+                $userData['account_id'] = $request->get('account_id');
+                $userData['is_owner'] = false;
+            }
+
+            info(print_r([
+                'userData' => $userData
+            ], true));
+
+            $user = User::create($userData);
+
+            $user->assignRole('super admin');
 
             event(new Registered($user));
 

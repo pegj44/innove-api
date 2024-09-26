@@ -15,6 +15,7 @@ class TradePairAccountsController extends Controller
 {
     public static $takeProfitTicks = 49;
     public static $stopLossTicks = 51;
+    public static $breachAllowanceAmount = 50;
 
     public function pairAccounts(Request $request)
     {
@@ -166,6 +167,11 @@ class TradePairAccountsController extends Controller
         info(print_r([
             'isBreached' => $item
         ], true));
+
+
+
+
+
         return false;
     }
 

@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('trading_individuals', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id');
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->unsignedBigInteger('account_id');
+            $table->foreign('account_id')->references('id')->on('accounts')->onDelete('cascade');
             $table->unsignedBigInteger('trading_unit_id');
             $table->foreign('trading_unit_id')->references('id')->on('trading_units');
             $table->string('first_name');
@@ -31,8 +31,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('trading_individuals', function (Blueprint $table) {
-            $table->dropForeign(['user_id']);
-            $table->dropColumn('user_id');
+            $table->dropForeign(['account_id']);
+            $table->dropColumn('account_id');
             $table->dropForeign(['trading_unit_id']);
             $table->dropColumn('trading_unit_id');
         });

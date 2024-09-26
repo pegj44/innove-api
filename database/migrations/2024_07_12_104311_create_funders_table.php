@@ -13,10 +13,12 @@ return new class extends Migration
     {
         Schema::create('funders', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id');
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->unsignedBigInteger('account_id');
+            $table->foreign('account_id')->references('id')->on('accounts')->onDelete('cascade');
             $table->string('name');
             $table->string('alias');
+            $table->string('reset_time');
+            $table->string('reset_time_zone');
             $table->timestamps();
         });
     }
@@ -27,8 +29,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('funders', function (Blueprint $table) {
-            $table->dropForeign(['user_id']);
-            $table->dropColumn('user_id');
+            $table->dropForeign(['account_id']);
+            $table->dropColumn('account_id');
         });
         Schema::dropIfExists('funders');
     }

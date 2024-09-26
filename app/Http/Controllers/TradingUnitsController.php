@@ -21,27 +21,20 @@ class TradingUnitsController extends Controller
     public function store(Request $request)
     {
         try {
-            $userId = auth()->id();
+            $accountId = auth()->user()->account_id;
 
             $validator = Validator::make($request->all(), [
                 'name' => [
                     'required',
                     'string',
                     'max:255',
-                    Rule::unique('trading_units', 'name')->where(function ($query) use ($userId) {
-                        return $query->where('user_id', $userId);
-                    })
-                ],
-                'ip_address' => [
-                    'required',
-                    'ip',
-                    Rule::unique('trading_units', 'ip_address')->where(function ($query) use ($userId) {
-                        return $query->where('user_id', $userId);
+                    Rule::unique('trading_units', 'name')->where(function ($query) use ($accountId) {
+                        return $query->where('account_id', $accountId);
                     })
                 ]
             ], [
                 'name.unique' => __('The unit name already exist.'),
-                'ip_address.unique' => __('The ip address is already added.')
+                'unit_id.unique' => __('The unit ID is already added.')
             ]);
 
             if ($validator->fails()) {
@@ -52,9 +45,9 @@ class TradingUnitsController extends Controller
 
             $unit = new TradingUnitsModel();
 
-            $unit->user_id = $userId;
+            $unit->account_id = $accountId;
 
-            $unit->fill($request->only(['name', 'ip_address', 'status']));
+            $unit->fill($request->only(['name', 'unit_id', 'status']));
 
             $unitSaved = $unit->save();
 
@@ -88,7 +81,7 @@ class TradingUnitsController extends Controller
         $unitsArr = [];
 
         foreach ($units as $unit) {
-            $unitsArr[$unit->ip_address] = $unit->id;
+            $unitsArr[$unit->unit_id] = $unit->id;
         }
 
         return $unitsArr;
@@ -96,11 +89,11 @@ class TradingUnitsController extends Controller
 
     public function getTradingUnits()
     {
-        $units = TradingUnitsModel::where('user_id', auth()->id())
+        $units = TradingUnitsModel::where('account_id', auth()->user()->account_id)
             ->get()
             ->keyBy('id')
             ->map(function($item) {
-                return collect($item)->except('user_id');
+                return collect($item)->except('account_id');
             })
             ->toArray();
 
@@ -198,6 +191,8 @@ class TradingUnitsController extends Controller
                 'name' => $request->get('username'),
                 'email' => $email,
                 'password' => Hash::make($request->get('password')),
+                'account_id' => auth()->user()->account_id,
+                'is_owner' => false
             ]);
 
             if (!$user) {
@@ -206,10 +201,11 @@ class TradingUnitsController extends Controller
                 ]);
             }
 
+            $user->assignRole('unit');
             $user->createToken(env('UNIT_TOKEN_NAME'), ['unit'])->plainTextToken;
 
             UserUnitLogin::create([
-                'user_id' => $currentUserId,
+                'account_id' => auth()->user()->account_id,
                 'unit_user_id' => $user->id
             ]);
 
@@ -235,10 +231,10 @@ class TradingUnitsController extends Controller
 
     public function getLoginDetails()
     {
-        $userId = Auth::id();
+        $userId = auth()->user()->account_id;
 
         return User::whereHas('unitUserLogin', function ($query) use ($userId) {
-            $query->where('user_id', $userId);
+            $query->where('account_id', $userId);
         })->first();
     }
 
@@ -248,7 +244,7 @@ class TradingUnitsController extends Controller
     public function update(Request $request, string $id)
     {
         try {
-            $unit = TradingUnitsModel::where('id', $id)->where('user_id', auth()->id())->first();
+            $unit = TradingUnitsModel::where('id', $id)->where('account_id', auth()->user()->account_id)->first();
 
             if (!$unit) {
                 return response()->json([
@@ -256,7 +252,7 @@ class TradingUnitsController extends Controller
                 ]);
             }
 
-            $unit->fill($request->only(['name', 'ip_address', 'status']));
+            $unit->fill($request->only(['name', 'unit_id', 'status']));
             $unitSaved = $unit->update();
 
             if (!$unitSaved) {
@@ -278,7 +274,7 @@ class TradingUnitsController extends Controller
      */
     public function destroy(string $id)
     {
-        $unit = TradingUnitsModel::where('id', $id)->where('user_id', auth()->id())->first();
+        $unit = TradingUnitsModel::where('id', $id)->where('account_id', auth()->user()->account_id)->first();
 
         if (!$unit) {
             return response()->json([

@@ -21,23 +21,7 @@ class FundersMetadata extends Model
     ];
 
     public static $defaultMetadata = [
-        'dashboard_url',
-        'platform_url',
-        'platform_type',
-        'purchase_type',
-        'evaluation_type',
-        'daily_threshold',
-        'daily_threshold_type',
-        'max_drawdown',
-        'max_drawdown_type',
-        'phase_one_target_profit',
-        'phase_one_target_profit_type',
-        'phase_two_target_profit',
-        'phase_two_target_profit_type',
-        'consistency_rule',
-        'consistency_rule_type',
-        'reset_time',
-        'reset_time_zone',
+
     ];
 
     public function funder()

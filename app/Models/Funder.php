@@ -10,14 +10,21 @@ class Funder extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id'
+        'account_id',
+        'name',
+        'alias'
+    ];
+
+    protected $attributes = [
+        'reset_time' => '',
+        'reset_time_zone' => ''
     ];
 
     public $metaData;
 
-    public function user()
+    public function account()
     {
-        return $this->belongsTo(User::class, 'id');
+        return $this->belongsTo(AccountModel::class);
     }
 
     public function metadata()
@@ -25,15 +32,15 @@ class Funder extends Model
         return $this->hasMany(FundersMetadata::class);
     }
 
-    public function credentials()
-    {
-        return $this->hasMany(TradingAccountCredential::class, 'funder_id');
-    }
-
-    public function tradeReports()
-    {
-        return $this->hasMany(TradeReport::class);
-    }
+//    public function credentials()
+//    {
+//        return $this->hasMany(TradingAccountCredential::class, 'funder_id');
+//    }
+//
+//    public function tradeReports()
+//    {
+//        return $this->hasMany(TradeReport::class);
+//    }
 
     public function createMeta($data)
     {

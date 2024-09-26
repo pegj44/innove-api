@@ -13,24 +13,19 @@ class TradingUnitsModel extends Model
 
     protected $table = 'trading_units';
     protected $fillable = [
-        'user_id',
+        'account_id',
         'name',
-        'ip_address',
+        'unit_id',
         'status'
     ];
 
-    public function user()
+    public function account()
     {
-        $this->belongsTo(User::class);
+        $this->belongsTo(AccountModel::class);
     }
 
-    public function individuals()
-    {
-        $this->hasMany(TradingIndividual::class, 'trading_unit_id');
-    }
-
-//    public function tradeReports()
+//    public function userAccounts()
 //    {
-//        $this->hasMany(TradeReport::class);
+//        $this->hasMany(TradingIndividual::class, 'trading_unit_id');
 //    }
 }

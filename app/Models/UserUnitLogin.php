@@ -10,13 +10,18 @@ class UserUnitLogin extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
+        'account_id',
         'unit_user_id'
     ];
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
+    }
+
+    public function account()
+    {
+        return $this->belongsTo(AccountModel::class);
     }
 
 //    public function unitUser()

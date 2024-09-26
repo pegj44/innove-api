@@ -11,8 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('trading_individual_metadata', function (Blueprint $table) {
-            $table->unique(['trading_individual_id', 'key'], 'unique_trading_individual_key');
+        Schema::create('accounts', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->timestamps();
         });
     }
 
@@ -21,8 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('trading_individual_metadata', function (Blueprint $table) {
-            $table->dropUnique('unique_trading_individual_key');
-        });
+        Schema::dropIfExists('accounts');
     }
 };
