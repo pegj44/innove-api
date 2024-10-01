@@ -24,8 +24,8 @@ class TradingUnitsModel extends Model
         $this->belongsTo(AccountModel::class);
     }
 
-//    public function userAccounts()
-//    {
-//        $this->hasMany(TradingIndividual::class, 'trading_unit_id');
-//    }
+    public function userAccounts()
+    {
+        $this->hasMany(TradingIndividual::class, 'trading_unit_id');
+    }
 }

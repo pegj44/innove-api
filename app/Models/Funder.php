@@ -16,16 +16,18 @@ class Funder extends Model
     ];
 
     protected $attributes = [
+        'platform_login_username' => '',
+        'platform_login_password' => '',
         'reset_time' => '',
         'reset_time_zone' => ''
     ];
 
     public $metaData;
 
-    public function account()
-    {
-        return $this->belongsTo(AccountModel::class);
-    }
+//    public function account()
+//    {
+//        return $this->belongsTo(AccountModel::class, 'account_id');
+//    }
 
     public function metadata()
     {

@@ -12,8 +12,12 @@ class TradeReportController extends Controller
 {
     public function getReports()
     {
-        $items = TradeReport::with('tradeCredential.tradingIndividual.tradingUnit', 'tradeCredential.funder.metadata')
-            ->where('user_id', auth()->id())->get();
+        $items = TradeReport::with('tradeCredential.userAccount.tradingUnit', 'tradeCredential.funder.metadata')
+            ->where('account_id', auth()->user()->account_id)
+            ->whereHas('tradeCredential', function($query) {
+                $query->where('status', 'active');
+            })
+            ->get();
 
         return response()->json($items);
     }
@@ -39,13 +43,6 @@ class TradeReportController extends Controller
             $machineJob = TradePairAccountsController::updateEquityUpdateStatus(auth()->id(), $request->get('account_id'), 'complete');
             $pairedItems = TradePairAccountsController::pairItems();
 
-//            info(print_r([
-//                'user_id' => auth()->id(),
-//                'account_id' => $request->get('account_id'),
-//                'machineJob' => $machineJob,
-//                'pairedItems' => $pairedItems
-//            ], true));
-
             if (!empty($pairedItems)) {
                 return response()->json($pairedItems);
             }
@@ -66,7 +63,7 @@ class TradeReportController extends Controller
                 return response()->json(['errors' => $validator->errors()], 422);
             }
 
-            $data['user_id'] = auth()->id();
+            $data['account_id'] = auth()->user()->account_id;
             $credential = TradeReport::create($data);
 
             if (!$credential) {
@@ -87,17 +84,18 @@ class TradeReportController extends Controller
      * @param $data
      * @return \Illuminate\Validation\Validator
      */
-    private function validateUserInput($data)
+    private function validateUserInput($data, $action = 'store')
     {
         $inputsToValidate = [
-//            'trading_unit_id' => ['required', 'numeric'],
-//            'funder_id' => ['required', 'numeric'],
             'trade_account_credential_id' => ['required', 'numeric'],
-            'starting_balance' => ['required', 'numeric'],
-            'starting_equity' => ['required', 'numeric'],
+            'starting_daily_equity' => ['required', 'numeric'],
             'latest_equity' => ['required', 'numeric'],
             'status' => ['regex:/^[a-zA-Z0-9- ]+$/'],
         ];
+
+        if ($action === 'update') {
+            unset($inputsToValidate['trade_account_credential_id']);
+        }
 
         return Validator::make($data, $inputsToValidate);
     }
@@ -105,9 +103,9 @@ class TradeReportController extends Controller
     public function edit(string $id)
     {
         try {
-            $item = TradeReport::with('tradeCredential.tradingIndividual.tradingUnit', 'tradeCredential.funder.metadata')
+            $item = TradeReport::with('tradeCredential.userAccount.tradingUnit', 'tradeCredential.funder.metadata')
                 ->where('id', $id)
-                ->where('user_id', auth()->id())->first();
+                ->where('account_id', auth()->user()->account_id)->first();
 
             return response()->json($item);
         } catch (\Exception $e) {
@@ -175,13 +173,13 @@ class TradeReportController extends Controller
     {
         try {
             $data = $request->except('_token');
-//            $validator = $this->validateUserInput($data);
-//
-//            if ($validator->fails()) {
-//                return response()->json(['errors' => $validator->errors()], 422);
-//            }
+            $validator = $this->validateUserInput($data, 'update');
 
-            $item = TradeReport::where('id', $id)->where('user_id', auth()->id())->first();
+            if ($validator->fails()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+
+            $item = TradeReport::where('id', $id)->where('account_id', auth()->user()->account_id)->first();
 
             if (!$item) {
                 return response()->json(['errors' => __('Unable to find trade report.')]);

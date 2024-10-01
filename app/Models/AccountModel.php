@@ -26,4 +26,14 @@ class AccountModel extends Model
     {
         return $this->hasMany(TradingUnitsModel::class, 'account_id');
     }
+
+    public function userAccounts()
+    {
+        return $this->hasMany(TradingIndividual::class, 'account_id');
+    }
+
+    public function funders()
+    {
+        return $this->hasMany(Funder::class, 'account_id');
+    }
 }

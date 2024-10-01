@@ -74,8 +74,8 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
 
 Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 {
-    Route::get('user/entities', [UserEntityController::class, 'getUserEntities']);
-//    Route::get('user/entities/individuals-and-funders', [UserEntityController::class, 'getUserIndividualsAndFunders']);
+    Route::get('account/entities', [UserEntityController::class, 'getAccountEntities']);
+//    Route::get('account/entities/individuals-and-funders', [UserEntityController::class, 'getUserIndividualsAndFunders']);
 
     Route::controller(TradePairAccountsController::class)->prefix('trade/')->group(function()
     {

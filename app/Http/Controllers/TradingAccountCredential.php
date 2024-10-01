@@ -14,8 +14,8 @@ class TradingAccountCredential extends Controller
      */
     public function getCredentials()
     {
-        $credentials = TradingAccountCredentialModel::with(['funder.metadata', 'tradingIndividual.tradingUnit'])
-            ->where('user_id', auth()->id())
+        $credentials = TradingAccountCredentialModel::with(['funder.metadata', 'userAccount.tradingUnit'])
+            ->where('account_id', auth()->user()->account_id)
             ->get();
 
         return response()->json($credentials);
@@ -35,16 +35,14 @@ class TradingAccountCredential extends Controller
     public function store(Request $request)
     {
         try {
-
             $data = array_filter($request->except('_token'));
-
             $validator = $this->validateUserInput($data);
 
             if ($validator->fails()) {
                 return response()->json(['errors' => $validator->errors()], 422);
             }
 
-            $data['user_id'] = auth()->id();
+            $data['account_id'] = auth()->user()->account_id;
 
             $credential = TradingAccountCredentialModel::create($data);
 
@@ -53,12 +51,10 @@ class TradingAccountCredential extends Controller
             }
 
             $tradeReport = new TradeReport();
-            $tradeReport->user_id = auth()->id();
+            $tradeReport->account_id = auth()->user()->account_id;
             $tradeReport->trade_account_credential_id = $credential->id;
-            $tradeReport->starting_balance = $request->get('starting_balance');
-            $tradeReport->starting_equity = $request->get('starting_balance');
+            $tradeReport->starting_daily_equity = $request->get('starting_balance');
             $tradeReport->latest_equity = $request->get('starting_balance');
-            $tradeReport->order_type = '';
             $tradeReport->status = 'idle';
             $tradeReport->save();
 
@@ -76,24 +72,15 @@ class TradingAccountCredential extends Controller
     private function validateUserInput($data)
     {
         $inputsToValidate = [
-            'trading_individual_id' => ['required', 'numeric'],
             'funder_id' => ['required', 'numeric'],
-            'account_id' => ['required'],
-            'account_type' => ['required'],
+            'user_account_id' => ['required'],
+            'funder_account_id' => ['required'],
             'starting_balance' => ['required'],
-            'phase' => ['required'],
+            'asset_type' => ['required'],
+            'symbol' => ['required'],
+            'current_phase' => ['required'],
             'status' => ['required']
         ];
-
-        if (array_intersect(array_keys($data), ['dashboard_login_username', 'dashboard_login_password'])) {
-            $inputsToValidate['dashboard_login_username'] = ['required',];
-            $inputsToValidate['dashboard_login_password'] = ['required'];
-        }
-
-        if (array_intersect(array_keys($data), ['platform_login_username', 'platform_login_password'])) {
-            $inputsToValidate['platform_login_username'] = ['required'];
-            $inputsToValidate['platform_login_password'] = ['required'];
-        }
 
         return Validator::make($data, $inputsToValidate);
     }
@@ -104,9 +91,9 @@ class TradingAccountCredential extends Controller
     public function edit(string $id)
     {
         try {
-            $credentials = TradingAccountCredentialModel::with(['funder.metadata', 'tradingIndividual.metadata'])
+            $credentials = TradingAccountCredentialModel::with(['funder.metadata', 'userAccount.metadata'])
                 ->where('id', $id)
-                ->where('user_id', auth()->id())
+                ->where('account_id', auth()->user()->account_id)
                 ->first();
 
             return response()->json($credentials);
@@ -132,7 +119,7 @@ class TradingAccountCredential extends Controller
                 return response()->json(['errors' => $validator->errors()], 422);
             }
 
-            $item = TradingAccountCredentialModel::where('id', $id)->where('user_id', auth()->id())->first();
+            $item = TradingAccountCredentialModel::where('id', $id)->where('account_id', auth()->user()->account_id)->first();
 
             if (!$item) {
                 return response()->json(['errors' => __('Unable to find credential record.')]);
@@ -158,7 +145,7 @@ class TradingAccountCredential extends Controller
     public function destroy(string $id)
     {
         try {
-            $item = TradingAccountCredentialModel::where('id', $id)->where('user_id', auth()->id())->first();
+            $item = TradingAccountCredentialModel::where('id', $id)->where('account_id', auth()->user()->account_id)->first();
 
             if (!$item) {
                 return response()->json(['errors' => 'Failed to remove item.']);

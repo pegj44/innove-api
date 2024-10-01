@@ -16,13 +16,13 @@ class TradingIndividualsController extends Controller
     public function getTradingIndividuals()
     {
         $items = TradingIndividual::with('metadata', 'tradingUnit')
-            ->where('user_id', auth()->id())
+            ->where('account_id', auth()->user()->account_id)
             ->get();
 
         $itemsWithMetadata = $items->map(function ($item) {
             return [
                 'id' => $item->id,
-                'user_id' => $item->user_id,
+                'account_id' => $item->account_id,
                 'first_name' => $item->first_name,
                 'middle_name' => $item->middle_name,
                 'last_name' => $item->last_name,
@@ -32,7 +32,7 @@ class TradingIndividualsController extends Controller
                 'trading_unit' => [
                     'id' => $item->tradingUnit->id,
                     'name' => $item->tradingUnit->name,
-                    'ip_address' => $item->tradingUnit->ip_address,
+                    'unit_id' => $item->tradingUnit->unit_id,
                 ],
                 'metadata' => $item->metadata->pluck('value', 'key')->toArray(),
             ];
@@ -74,10 +74,10 @@ class TradingIndividualsController extends Controller
      */
     public function store(Request $request)
     {
-        return self::save(auth()->id(), $request->except('_token'));
+        return self::save(auth()->user()->account_id, $request->except('_token'));
     }
 
-    public static function save($user_id, $data)
+    public static function save($account_id, $data)
     {
         try {
             $validator = self::validateInputs($data);
@@ -88,7 +88,7 @@ class TradingIndividualsController extends Controller
 
             $individual = new TradingIndividual();
 
-            $individual->user_id = $user_id;
+            $individual->account_id = $account_id;
             $individual->trading_unit_id = $data['unit'];
             $individual->first_name = $data['first_name'];
             $individual->middle_name = $data['middle_name'];
@@ -194,13 +194,13 @@ class TradingIndividualsController extends Controller
     {
         $items = TradingIndividual::with('metadata', 'tradingUnit')
             ->where('id', $id)
-            ->where('user_id', auth()->id())
+            ->where('account_id', auth()->user()->account_id)
             ->get();
 
         $itemsWithMetadata = $items->map(function ($item) {
             return [
                 'id' => $item->id,
-                'user_id' => $item->user_id,
+                'account_id' => $item->account_id,
                 'first_name' => $item->first_name,
                 'middle_name' => $item->middle_name,
                 'last_name' => $item->last_name,
@@ -210,7 +210,7 @@ class TradingIndividualsController extends Controller
                 'trading_unit' => [
                     'id' => $item->tradingUnit->id,
                     'name' => $item->tradingUnit->name,
-                    'ip_address' => $item->tradingUnit->ip_address,
+                    'unit_id' => $item->tradingUnit->unit_id,
                 ],
                 'metadata' => $item->metadata->pluck('value', 'key')->toArray(),
             ];
@@ -232,7 +232,7 @@ class TradingIndividualsController extends Controller
                 return response()->json(['validation_error' => $validator->errors()], 422);
             }
 
-            $individual = TradingIndividual::where('id', $id)->where('user_id', auth()->id())->first();
+            $individual = TradingIndividual::where('id', $id)->where('account_id', auth()->user()->account_id)->first();
 
             $individual->trading_unit_id = $data['unit'];
             $individual->first_name = $data['first_name'];

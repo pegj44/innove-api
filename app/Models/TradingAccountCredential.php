@@ -10,23 +10,55 @@ class TradingAccountCredential extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
-        'trading_individual_id',
-        'funder_id',
-        'account_type',
         'account_id',
-        'phase',
+        'user_account_id',
+        'funder_id',
+        'funder_account_id',
         'starting_balance',
-        'dashboard_login_username',
-        'dashboard_login_password',
+        'asset_type',
+        'symbol',
+        'current_phase',
+        'phase_1_total_target_profit',
+        'phase_1_daily_target_profit',
+        'phase_1_max_drawdown',
+        'phase_1_daily_drawdown',
+        'phase_2_total_target_profit',
+        'phase_2_daily_target_profit',
+        'phase_2_max_drawdown',
+        'phase_2_daily_drawdown',
+        'phase_3_total_target_profit',
+        'phase_3_daily_target_profit',
+        'phase_3_max_drawdown',
+        'phase_3_daily_drawdown',
+        'status',
+        'platform_type',
+        'platform_url',
         'platform_login_username',
         'platform_login_password',
-        'status'
     ];
 
-    public function user()
+    public $attributes = [
+        'phase_1_total_target_profit' => '',
+        'phase_1_daily_target_profit' => '',
+        'phase_1_max_drawdown' => '',
+        'phase_1_daily_drawdown' => '',
+        'phase_2_total_target_profit' => '',
+        'phase_2_daily_target_profit' => '',
+        'phase_2_max_drawdown' => '',
+        'phase_2_daily_drawdown' => '',
+        'phase_3_total_target_profit' => '',
+        'phase_3_daily_target_profit' => '',
+        'phase_3_max_drawdown' => '',
+        'phase_3_daily_drawdown' => '',
+        'status' => 'active',
+        'platform_url' => '',
+        'platform_login_username' => '',
+        'platform_login_password' => '',
+    ];
+
+    public function account()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(AccountModel::class, 'account_id');
     }
 
     public function funder()
@@ -34,9 +66,9 @@ class TradingAccountCredential extends Model
         return $this->belongsTo(Funder::class, 'funder_id');
     }
 
-    public function tradingIndividual()
+    public function userAccount()
     {
-        return $this->belongsTo(TradingIndividual::class);
+        return $this->belongsTo(TradingIndividual::class, 'user_account_id');
     }
 
     public function tradeReports()

@@ -99,6 +99,8 @@ class FunderController extends Controller
             $funder->account_id = auth()->user()->account_id;
             $funder->name = $data['name'];
             $funder->alias = $data['alias'];
+            $funder->platform_login_username = $data['platform_login_username'];
+            $funder->platform_login_password = $data['platform_login_password'];
             $funder->reset_time = $data['reset_time'];
             $funder->reset_time_zone = $data['reset_time_zone'];
             $funder->metaData = $data;
@@ -150,6 +152,8 @@ class FunderController extends Controller
                 'account_id' => $funder->account_id,
                 'name' => $funder->name,
                 'alias' => $funder->alias,
+                'platform_login_username' => $funder->platform_login_username,
+                'platform_login_password' => $funder->platform_login_password,
                 'reset_time' => $funder->reset_time,
                 'reset_time_zone' => $funder->reset_time_zone,
                 'created_at' => $funder->created_at,
@@ -183,6 +187,8 @@ class FunderController extends Controller
 
             $funder->name = $data['name'];
             $funder->alias = $data['alias'];
+            $funder->platform_login_username = $data['platform_login_username'];
+            $funder->platform_login_password = $data['platform_login_password'];
             $funder->reset_time = $data['reset_time'];
             $funder->reset_time_zone = $data['reset_time_zone'];
             $funder->metaData = $data;

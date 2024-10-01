@@ -10,26 +10,21 @@ class TradeReport extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
-        'trading_unit_id',
-        'funder_id',
+        'account_id',
         'trade_account_credential_id',
-        'starting_balance',
-        'starting_equity',
+        'starting_daily_equity',
         'latest_equity',
-        'status',
-        'remarks',
         'purchase_type',
-        'order_type',
         'order_amount',
         'stop_loss_ticks',
         'take_profit_ticks',
+        'status',
+        'remarks',
     ];
 
     protected $attributes = [
         'remarks' => '',
         'purchase_type' => '',
-        'order_type' => '',
         'order_amount' => '',
         'stop_loss_ticks' => '',
         'take_profit_ticks' => '',

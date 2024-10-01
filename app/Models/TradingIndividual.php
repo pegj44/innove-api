@@ -10,7 +10,7 @@ class TradingIndividual extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
+        'account_id',
         'trading_unit_id',
         'first_name',
         'middle_name',
@@ -19,9 +19,9 @@ class TradingIndividual extends Model
 
     public $metaData;
 
-    public function user()
+    public function account()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(AccountModel::class);
     }
 
     public function tradingUnit()
