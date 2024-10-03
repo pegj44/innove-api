@@ -20,7 +20,7 @@ class TradingUnitsController extends Controller
      */
     public function store(Request $request)
     {
-        try {
+//        try {
             $accountId = auth()->user()->account_id;
 
             $validator = Validator::make($request->all(), [
@@ -61,11 +61,11 @@ class TradingUnitsController extends Controller
                 'unit_id' => $unit->id
             ]);
 
-        } catch (\Exception $e) {
-            return response()->json([
-                'errors' => __('Unable to create a unit.')
-            ], 400);
-        }
+//        } catch (\Exception $e) {
+//            return response()->json([
+//                'errors' => __('Unable to create a unit.')
+//            ], 400);
+//        }
     }
 
     public static function getUnitsArray()

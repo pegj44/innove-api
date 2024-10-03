@@ -71,9 +71,7 @@ class AuthenticatedSessionController extends Controller
 
             $tokenName = env('ADMIN_TOKEN_NAME');
             $user = Auth::user();
-//            $this->revokeToken($user->id, $tokenName);
-
-            $token = $user->createToken($tokenName, ['unit'])->plainTextToken;
+            $token = $user->createToken($tokenName, ['admin'])->plainTextToken;
 
             return response()->json([
                 'token' => $token,
@@ -145,10 +143,10 @@ class AuthenticatedSessionController extends Controller
 
             return response()->json([
                 'token' => $token,
-                'userId' => auth()->id(),
+                'userId' => auth()->user()->account_id,
                 'name' => auth()->user()->name,
                 'email' => auth()->user()->email,
-                'ip' => $request->get('unit_id')
+                'unit' => $request->get('unit_id')
             ]);
         }
 

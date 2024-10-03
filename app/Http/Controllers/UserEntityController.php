@@ -15,7 +15,7 @@ class UserEntityController extends Controller
         'funders.metadata',
         'accountCredentials',
         'accountCredentials.tradingIndividual',
-        'accountCredentials.tradingIndividual.metadata',
+        'accountCredentials.userAccount.metadata',
         'units',
     ];
 

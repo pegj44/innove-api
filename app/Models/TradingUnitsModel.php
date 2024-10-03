@@ -21,7 +21,7 @@ class TradingUnitsModel extends Model
 
     public function account()
     {
-        $this->belongsTo(AccountModel::class);
+        $this->belongsTo(AccountModel::class, 'account_id');
     }
 
     public function userAccounts()

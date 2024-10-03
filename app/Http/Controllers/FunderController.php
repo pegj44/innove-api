@@ -99,8 +99,8 @@ class FunderController extends Controller
             $funder->account_id = auth()->user()->account_id;
             $funder->name = $data['name'];
             $funder->alias = $data['alias'];
-            $funder->platform_login_username = $data['platform_login_username'];
-            $funder->platform_login_password = $data['platform_login_password'];
+            $funder->platform_login_username = (!empty($data['platform_login_username']))? $data['platform_login_username'] : '';
+            $funder->platform_login_password = (!empty($data['platform_login_password']))? $data['platform_login_password'] : '';
             $funder->reset_time = $data['reset_time'];
             $funder->reset_time_zone = $data['reset_time_zone'];
             $funder->metaData = $data;
@@ -187,8 +187,8 @@ class FunderController extends Controller
 
             $funder->name = $data['name'];
             $funder->alias = $data['alias'];
-            $funder->platform_login_username = $data['platform_login_username'];
-            $funder->platform_login_password = $data['platform_login_password'];
+            $funder->platform_login_username = (!empty($data['platform_login_username']))? $data['platform_login_username'] : '';
+            $funder->platform_login_password = (!empty($data['platform_login_password']))? $data['platform_login_password'] : '';
             $funder->reset_time = $data['reset_time'];
             $funder->reset_time_zone = $data['reset_time_zone'];
             $funder->metaData = $data;

@@ -30,15 +30,15 @@ class TradeReport extends Model
         'take_profit_ticks' => '',
     ];
 
-    public function user()
+    public function account()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(AccountModel::class, 'account_id');
     }
 
-    public function tradeCredential()
-    {
-        return $this->belongsTo(TradingAccountCredential::class, 'trade_account_credential_id');
-    }
+//    public function tradeCredential()
+//    {
+//        return $this->belongsTo(TradingAccountCredential::class, 'trade_account_credential_id');
+//    }
 
     public function tradingAccountCredential()
     {

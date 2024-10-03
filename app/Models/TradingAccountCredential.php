@@ -35,6 +35,7 @@ class TradingAccountCredential extends Model
         'platform_url',
         'platform_login_username',
         'platform_login_password',
+        'drawdown_type',
     ];
 
     public $attributes = [
@@ -54,6 +55,7 @@ class TradingAccountCredential extends Model
         'platform_url' => '',
         'platform_login_username' => '',
         'platform_login_password' => '',
+        'drawdown_type' => '',
     ];
 
     public function account()

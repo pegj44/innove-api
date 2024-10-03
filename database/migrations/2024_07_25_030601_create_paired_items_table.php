@@ -11,14 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('trading_units', function (Blueprint $table) {
+        Schema::create('paired_items', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('account_id');
             $table->foreign('account_id')->references('id')->on('accounts')->onDelete('cascade');
-            $table->string('unit_id');
-            $table->string('name');
-            $table->integer('status');
+            $table->bigInteger('pair_1');
+            $table->bigInteger('pair_2');
+            $table->string('status');
             $table->timestamps();
+
+            $table->unique(['pair_1', 'pair_2']);
         });
     }
 
@@ -27,6 +29,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('trading_units');
+        Schema::table('paired_items', function (Blueprint $table) {
+            $table->dropForeign(['account_id']);
+            $table->dropColumn('account_id');
+        });
+        Schema::dropIfExists('paired_items');
     }
 };

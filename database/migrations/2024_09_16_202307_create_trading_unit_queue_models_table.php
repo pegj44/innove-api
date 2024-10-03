@@ -11,13 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('trading_units', function (Blueprint $table) {
+        Schema::create('trading_unit_queue_models', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('account_id');
             $table->foreign('account_id')->references('id')->on('accounts')->onDelete('cascade');
-            $table->string('unit_id');
-            $table->string('name');
-            $table->integer('status');
+            $table->string('unit');
+            $table->string('machine');
+            $table->string('queue_id');
+            $table->string('purchase_type');
             $table->timestamps();
         });
     }
@@ -27,6 +28,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('trading_units');
+        Schema::table('trading_unit_queue_models', function (Blueprint $table) {
+            $table->dropForeign(['account_id']);
+            $table->dropColumn('account_id');
+        });
+        Schema::dropIfExists('trading_unit_queue_models');
     }
 };

@@ -10,8 +10,8 @@ class TradingUnitQueueModel extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
-        'ip_address',
+        'account_id',
+        'unit',
         'machine',
         'queue_id'
     ];

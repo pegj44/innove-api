@@ -9,16 +9,17 @@ class PairedItems extends Model
 {
     use HasFactory;
 
+    protected $table = 'paired_items';
     protected $fillable = [
-        'user_id',
+        'account_id',
         'pair_1',
         'pair_2',
         'status'
     ];
 
-    public function user()
+    public function account()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(AccountModel::class, 'account_id');
     }
 
     public function tradeReportPair1()

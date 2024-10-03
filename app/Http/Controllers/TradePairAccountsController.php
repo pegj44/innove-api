@@ -17,6 +17,46 @@ class TradePairAccountsController extends Controller
     public static $stopLossTicks = 51;
     public static $breachAllowanceAmount = 50;
 
+    public function pairManual(Request $request)
+    {
+        $ids = explode(',', $request->get('paired-ids'));
+
+        $pairedItems = new PairedItems();
+        $pairedItems->account_id = auth()->user()->account_id;
+        $pairedItems->pair_1 = $ids[0];
+        $pairedItems->pair_2 = $ids[1];
+        $pairedItems->status = 'pairing';
+        $pairedItems->save();
+
+        $item1 = TradeReport::where('id', $ids[0])->first();
+        $item1->status = 'pairing';
+        $item1->update();
+
+        $item2 = TradeReport::where('id', $ids[1])->first();
+        $item2->status = 'pairing';
+        $item2->update();
+
+        return response()->json([
+            'pairedId' => $pairedItems->id
+        ]);
+    }
+
+    public function removePair(Request $request, string $id)
+    {
+        $item = PairedItems::where('id', $id)->first();
+        $item->delete();
+
+        $item1 = TradeReport::where('id', $request->get('pair1'))->first();
+        $item1->status = 'idle';
+        $item1->update();
+
+        $item2 = TradeReport::where('id', $request->get('pair2'))->first();
+        $item2->status = 'idle';
+        $item2->update();
+
+        return response()->json(['id' => $id]);
+    }
+
     public function pairAccounts(Request $request)
     {
         $items = self::getTradableAccounts();
@@ -95,7 +135,7 @@ class TradePairAccountsController extends Controller
 
     public static function getTradableAccounts()
     {
-        return TradeReport::with('tradeCredential.tradingIndividual.tradingUnit', 'tradeCredential.funder', 'tradeCredential.funder.metadata')
+        return TradeReport::with('tradingAccountCredential.userAccount.tradingUnit', 'tradingAccountCredential.funder', 'tradingAccountCredential.funder.metadata')
             ->where('user_id', auth()->id())
             ->where('status', 'idle')
             ->get()
@@ -196,12 +236,12 @@ class TradePairAccountsController extends Controller
     public function getPairedItems()
     {
         $pairedItems = PairedItems::with([
-            'tradeReportPair1.tradeCredential.tradingIndividual.tradingUnit',
-            'tradeReportPair1.tradeCredential.funder.metadata',
-            'tradeReportPair2.tradeCredential.tradingIndividual.tradingUnit',
-            'tradeReportPair2.tradeCredential.funder.metadata'
+            'tradeReportPair1.tradingAccountCredential.userAccount.tradingUnit',
+            'tradeReportPair1.tradingAccountCredential.funder.metadata',
+            'tradeReportPair2.tradingAccountCredential.userAccount.tradingUnit',
+            'tradeReportPair2.tradingAccountCredential.funder.metadata'
         ])
-        ->where('user_id', auth()->id())
+        ->where('account_id', auth()->user()->account_id)
         ->get();
 
         return response()->json($pairedItems);

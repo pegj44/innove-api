@@ -21,7 +21,7 @@ class PusherController extends Controller
         return response($auth);
     }
 
-    public static function checkUnitConnection($userId, $unitIp)
+    public static function checkUnitConnection($acountId, $unitId)
     {
         $pusher = new Pusher(
             env('PUSHER_APP_KEY'),
@@ -30,7 +30,7 @@ class PusherController extends Controller
             ['cluster' => env('PUSHER_APP_CLUSTER'), 'useTLS' => true]
         );
 
-        $channelName = 'private-unit.'. $userId .'.'. $unitIp;
+        $channelName = 'private-unit.'. $acountId .'.'. $unitId;
 
         try {
             $channelInfo = $pusher->getChannelInfo($channelName, []);

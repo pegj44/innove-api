@@ -82,9 +82,11 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 //        Route::post('/starting-equity/update', 'updateStartingEquity');
 //        Route::post('/starting-equity/update/status', 'updateStartingEquityJobStatus');
         Route::post('/pair-accounts', 'pairAccounts');
+        Route::post('/pair-manual', 'pairManual');
         Route::get('/paired-items', 'getPairedItems');
         Route::post('/update-trade-report-settings', 'updateTradeSettings');
         Route::delete('/paired-items', 'clearPairedItems');
+        Route::delete('/pair/{id}/remove', 'removePair');
     });
 
     Route::controller(TradingUnitsController::class)->group(function()
@@ -147,6 +149,7 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
     {
         Route::post('trade/initiate', 'initiateTrade');
         Route::post('trade/unit-ready', 'unitReady');
+        Route::post('trade/position/close', 'closePosition');
     });
 
     Route::controller(CalculationsController::class)->prefix('calculate')->group(function()

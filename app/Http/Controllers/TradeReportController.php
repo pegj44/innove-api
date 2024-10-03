@@ -12,9 +12,9 @@ class TradeReportController extends Controller
 {
     public function getReports()
     {
-        $items = TradeReport::with('tradeCredential.userAccount.tradingUnit', 'tradeCredential.funder.metadata')
+        $items = TradeReport::with('tradingAccountCredential.userAccount.tradingUnit', 'tradingAccountCredential.funder.metadata')
             ->where('account_id', auth()->user()->account_id)
-            ->whereHas('tradeCredential', function($query) {
+            ->whereHas('tradingAccountCredential', function($query) {
                 $query->where('status', 'active');
             })
             ->get();
@@ -103,7 +103,7 @@ class TradeReportController extends Controller
     public function edit(string $id)
     {
         try {
-            $item = TradeReport::with('tradeCredential.userAccount.tradingUnit', 'tradeCredential.funder.metadata')
+            $item = TradeReport::with('tradingAccountCredential.userAccount.tradingUnit', 'tradingAccountCredential.funder.metadata')
                 ->where('id', $id)
                 ->where('account_id', auth()->user()->account_id)->first();
 
@@ -160,7 +160,7 @@ class TradeReportController extends Controller
                 return response()->json(['errors' => __('Failed to update trade report.')]);
             }
 
-            return response()->json(['message' => __('Successfully updated trade report.')]);
+            return response()->json(['message' => __('Successfully updated trade account.')]);
         } catch (\Exception $e) {
             info(print_r([
                 'errorPatchTradeReport' => $e->getMessage()
@@ -192,7 +192,7 @@ class TradeReportController extends Controller
                 return response()->json(['errors' => __('Failed to update trade report.')]);
             }
 
-            return response()->json(['message' => __('Successfully updated trade report.')]);
+            return response()->json(['message' => __('Successfully updated trade account.')]);
         } catch (\Exception $e) {
             info(print_r([
                 'errorUpdateTradeReport' => $e->getMessage()
