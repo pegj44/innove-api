@@ -7,6 +7,37 @@
 //    ], true));
 //}
 
+function getQueueUnitIdMachine($data, $index = 0, $type = 'unit')
+{
+    $items = explode(',', $data);
+    $item = explode('|', $items[$index]);
+
+    return ($type === 'unit')? $item[1] : $item[0];
+}
+
+function getQueueUnitId($units, $unit, $getPairedId = false)
+{
+    $items = explode(',', $units);
+    $ids = [];
+
+    foreach ($items as $item) {
+        $itemArr = explode('|', $item);
+        $ids[$itemArr[1]] = $itemArr[0];
+    }
+
+    if ($getPairedId) { // get the paired ID
+        unset($ids[$unit]);
+        $id = array_keys($ids);
+        return $id[0];
+    }
+    return $ids[$unit]; // get own ID
+}
+
+function getUnitAuthId()
+{
+    return \App\Models\UserUnitLogin::where('account_id', auth()->user()->account_id)->pluck('unit_user_id')->first();
+}
+
 function parseArgs($array, $default)
 {
     if (!is_array($array)) {

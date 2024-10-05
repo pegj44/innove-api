@@ -139,11 +139,9 @@ class AuthenticatedSessionController extends Controller
 
             $token = auth()->user()->createToken($tokenName, ['unit'])->plainTextToken;
 
-//            MachineJobs::where('user_id', auth()->id())->delete(); // Reset machine usage
-
             return response()->json([
                 'token' => $token,
-                'userId' => auth()->user()->account_id,
+                'userId' => auth()->id(),
                 'name' => auth()->user()->name,
                 'email' => auth()->user()->email,
                 'unit' => $request->get('unit_id')

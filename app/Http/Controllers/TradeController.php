@@ -19,22 +19,40 @@ class TradeController extends Controller
 
     public function closePosition(Request $request)
     {
+        $isUnitConnected = PusherController::checkUnitConnection(getUnitAuthId(), $request->get('pairUnit'));
+        $UnitMatch = TradingUnitQueueModel::where('account_id', auth()->user()->account_id)
+            ->where('queue_id', $request->get('queue_id'))->first();
 
+//        info(print_r([
+//            'pairUnit' => $request->get('pairUnit'),
+//            'unitId' => getQueueUnitId($UnitMatch->unit, $request->get('pairUnit'), true)
+//        ], true));
+
+        if ($isUnitConnected) {
+            $pairUnit = getQueueUnitId($UnitMatch->unit, $request->get('pairUnit'), true);
+
+            UnitsEvent::dispatch(getUnitAuthId(), [
+                'pairUnit' => $request->get('pairUnit'),
+                'machine' => $request->get('machine'),
+                'queue_id' => $request->get('queue_id')
+            ], 'close-position', $request->get('machine'), $pairUnit);
+
+            return response()->json(1);
+        }
+
+        return response()->json(0);
     }
 
     public function unitReady(Request $request)
     {
-        info(print_r([
-            'unitReady' => $request->all()
-        ], true));
-
-        $hasUnitMatch = TradingUnitQueueModel::where('account_id', auth()->user()->account_id)
+        $UnitMatch = TradingUnitQueueModel::where('account_id', auth()->user()->account_id)
             ->where('queue_id', $request->get('queue_id'))->first();
 
-        if ($hasUnitMatch) {
+        if ($UnitMatch) {
 
             $currentUtcTime = Carbon::now('UTC');
-            $futureTime = $currentUtcTime->addSeconds(10);
+            $futureTime = $currentUtcTime->addSeconds(10); // seconds of delay allowance before trade button click.
+
             $args = [
                 'year' => $futureTime->format('Y'),
                 'month' => $futureTime->format('m'),
@@ -42,21 +60,27 @@ class TradeController extends Controller
                 'hours' => $futureTime->format('H'),
                 'minutes' => $futureTime->format('i'),
                 'seconds' => $futureTime->format('s'),
-                'purchase_type' => $hasUnitMatch->purchase_type,
-                'machine' => $hasUnitMatch->machine
+                'purchase_type' => $UnitMatch->purchase_type,
+                'pairUnit' => $request->get('unit'),
+                'queue_id' => $request->get('queue_id'),
+                'machine' => $UnitMatch->machine
             ];
 
-            UnitsEvent::dispatch(auth()->user()->account_id, $args, 'do-trade', $hasUnitMatch->machine, $hasUnitMatch->unit);
+            UnitsEvent::dispatch(getUnitAuthId(), $args, 'do-trade', $UnitMatch->machine, getQueueUnitIdMachine($UnitMatch->unit));
 
-            $args['purchase_type'] = ($hasUnitMatch->purchase_type === 'sell')? 'buy' : 'sell';
+            $args['purchase_type'] = ($UnitMatch->purchase_type === 'sell')? 'buy' : 'sell';
             $args['machine'] = $request->get('machine');
-            UnitsEvent::dispatch(auth()->user()->account_id, $args, 'do-trade', $request->get('machine'), $request->get('unit'));
+            $args['pairUnit'] = getQueueUnitIdMachine($UnitMatch->unit);
 
-            $hasUnitMatch->delete();
+            UnitsEvent::dispatch(getUnitAuthId(), $args, 'do-trade', $request->get('machine'), $request->get('unit'));
+
+            $UnitMatch->unit = $UnitMatch->unit .','. $request->get('itemId') .'|'. $request->get('unit');
+            $UnitMatch->update();
+//            $UnitMatch->delete();
         } else {
             $newQueue = new TradingUnitQueueModel();
             $newQueue->account_id = auth()->user()->account_id;
-            $newQueue->unit = $request->get('unit');
+            $newQueue->unit = $request->get('itemId') .'|'. $request->get('unit');
             $newQueue->machine = $request->get('machine');
             $newQueue->queue_id = $request->get('queue_id');
             $newQueue->purchase_type = $request->get('purchase_type');
@@ -72,9 +96,9 @@ class TradeController extends Controller
 
         unset($data['paired_id']);
 
-        foreach ($data as $item) {
+        foreach ($data as $key => $item) {
 
-            $isUnitConnected = PusherController::checkUnitConnection(auth()->user()->account_id, $item['unit']);
+            $isUnitConnected = PusherController::checkUnitConnection(getUnitAuthId(), $item['unit']);
 
             if (!$isUnitConnected) {
                 return response()->json([
@@ -82,7 +106,7 @@ class TradeController extends Controller
                 ]);
             } else {
 
-                UnitsEvent::dispatch(auth()->id(), [
+                UnitsEvent::dispatch(getUnitAuthId(), [
                     'account_id' => $item['account_id'],
                     'latest_equity' => $item['latest_equity'],
                     'purchase_type' => $item['purchase_type'],
@@ -92,7 +116,8 @@ class TradeController extends Controller
                     'stop_loss_ticks' => $item['stop_loss_ticks'],
                     'queue_id' => $queueId,
                     'machine' => $item['machine'],
-                    'unit' => $item['unit']
+                    'unit' => $item['unit'],
+                    'itemId' => $item['id'],
                 ], 'initiate-trade', $item['machine'], $item['unit']);
             }
         }

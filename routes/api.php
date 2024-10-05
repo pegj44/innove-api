@@ -219,9 +219,9 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
 //        \App\Models\Funder::where('user_id', auth()->id())->delete();
 
-        dd(auth()->user()->account_id);
+        dd(getUnitAuthId());
 
-        return response()->json(['test2' => 3]);
+//        return response()->json(['test2' => 3]);
     });
 });
 
