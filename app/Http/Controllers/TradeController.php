@@ -20,27 +20,98 @@ class TradeController extends Controller
     public function closePosition(Request $request)
     {
         $isUnitConnected = PusherController::checkUnitConnection(getUnitAuthId(), $request->get('pairUnit'));
-        $UnitMatch = TradingUnitQueueModel::where('account_id', auth()->user()->account_id)
-            ->where('queue_id', $request->get('queue_id'))->first();
-
-//        info(print_r([
-//            'pairUnit' => $request->get('pairUnit'),
-//            'unitId' => getQueueUnitId($UnitMatch->unit, $request->get('pairUnit'), true)
-//        ], true));
 
         if ($isUnitConnected) {
+            $UnitMatch = TradingUnitQueueModel::where('account_id', auth()->user()->account_id)
+                ->where('queue_id', $request->get('queue_id'))->first();
             $pairUnit = getQueueUnitId($UnitMatch->unit, $request->get('pairUnit'), true);
 
+            $pairUnitId = getQueueUnitId($UnitMatch->unit, $request->get('pairUnit'), false, 'id');
+            $unitId = getQueueUnitId($UnitMatch->unit, $request->get('selfUnit'), false, 'id');
+
+            $this->updateLatestEquity($unitId, $request->get('latestEquity'));
+
             UnitsEvent::dispatch(getUnitAuthId(), [
-                'pairUnit' => $request->get('pairUnit'),
+                'pairQueueId' => $request->get('pairQueueId'),
+                'pairUnit' => $pairUnit,
                 'machine' => $request->get('machine'),
-                'queue_id' => $request->get('queue_id')
-            ], 'close-position', $request->get('machine'), $pairUnit);
+                'queue_id' => $request->get('queue_id'),
+                'selfUnit' => $request->get('pairUnit')
+            ], 'close-position', $request->get('machine'), $request->get('pairUnit'));
+
+            // Attempt to close trading position in "Ongoing Trades"
+            // tab when both trading accounts are closed.
+            $this->closeTradingPositionQueue($pairUnitId, $unitId, $request->get('pairQueueId'));
 
             return response()->json(1);
         }
 
         return response()->json(0);
+    }
+
+    private function closeTradingPositionQueue($id1, $id2, $pairQueueId)
+    {
+        $item1 = TradeReport::where('id', $id1)->first();
+        $item2 = TradeReport::where('id', $id2)->first();
+
+        if ($item1->status !== 'trading'&& $item2->status !== 'trading') {
+            // close position
+            $trade = PairedItems::where('account_id', auth()->user()->account_id)
+                ->where('id', $pairQueueId)
+                ->first();
+
+            $trade->delete();
+
+            info(print_r([
+                'closeTradingPositionQueue2' => 'delete'
+            ], true));
+        }
+
+        info(print_r([
+            'closeTradingPositionQueue1' => 'no delete'
+        ], true));
+
+        return false;
+    }
+
+    private function updateLatestEquity($unitId, $latestEquity)
+    {
+        $tradeAccount = TradeReport::with('tradingAccountCredential')
+            ->where('account_id', auth()->user()->account_id)
+            ->where('id', $unitId)
+            ->first();
+
+        $latestEquity = (float) str_replace(' ', '', $latestEquity);
+        $tradeAccount->latest_equity = $latestEquity;
+        $tradeAccount->status = $this->getStatusByLatestEquity($tradeAccount, $latestEquity);
+        $tradeAccount->update();
+    }
+
+    private function getStatusByLatestEquity($tradeAccount, $latestEquity)
+    {
+        $tradeAccount = $tradeAccount->toArray();
+        $maxDrawdownAllowance = 50;
+
+        $latestEquity = (float) $latestEquity;
+        $startingBalance = (float) $tradeAccount['trading_account_credential']['starting_balance'];
+        $currentPhase = str_replace('-', '_', $tradeAccount['trading_account_credential']['current_phase']);
+        $maxDrawdown = (float) $tradeAccount['trading_account_credential'][$currentPhase .'_max_drawdown'] + $maxDrawdownAllowance;
+        $dailyDrawdown = (float) $tradeAccount['trading_account_credential'][$currentPhase .'_daily_drawdown'];
+        $dailyTp = (float) $tradeAccount['trading_account_credential'][$currentPhase .'_daily_target_profit'];
+        $startingDailyEquity = (float) $tradeAccount['starting_daily_equity'];
+
+        $totalAsset = $latestEquity - $startingBalance;
+        $pnl = $latestEquity - $startingDailyEquity;
+
+        if ($totalAsset <= -$maxDrawdown) {
+            return 'breached';
+        }
+
+        if ($pnl >= ($dailyTp / 2) || $pnl <= -($dailyDrawdown/2)) {
+            return 'abstained';
+        }
+
+        return 'idle';
     }
 
     public function unitReady(Request $request)
@@ -52,8 +123,10 @@ class TradeController extends Controller
 
             $currentUtcTime = Carbon::now('UTC');
             $futureTime = $currentUtcTime->addSeconds(10); // seconds of delay allowance before trade button click.
+            $unitMatchId = getQueueUnitIdMachine($UnitMatch->unit);
 
             $args = [
+                'pairQueueId' => $request->get('pairQueueId'),
                 'year' => $futureTime->format('Y'),
                 'month' => $futureTime->format('m'),
                 'day' => $futureTime->format('d'),
@@ -62,15 +135,17 @@ class TradeController extends Controller
                 'seconds' => $futureTime->format('s'),
                 'purchase_type' => $UnitMatch->purchase_type,
                 'pairUnit' => $request->get('unit'),
+                'selfUnit' => $unitMatchId,
                 'queue_id' => $request->get('queue_id'),
                 'machine' => $UnitMatch->machine
             ];
 
-            UnitsEvent::dispatch(getUnitAuthId(), $args, 'do-trade', $UnitMatch->machine, getQueueUnitIdMachine($UnitMatch->unit));
+            UnitsEvent::dispatch(getUnitAuthId(), $args, 'do-trade', $UnitMatch->machine, $unitMatchId);
 
             $args['purchase_type'] = ($UnitMatch->purchase_type === 'sell')? 'buy' : 'sell';
             $args['machine'] = $request->get('machine');
-            $args['pairUnit'] = getQueueUnitIdMachine($UnitMatch->unit);
+            $args['pairUnit'] = $unitMatchId;
+            $args['selfUnit'] = $request->get('unit');
 
             UnitsEvent::dispatch(getUnitAuthId(), $args, 'do-trade', $request->get('machine'), $request->get('unit'));
 
@@ -107,6 +182,7 @@ class TradeController extends Controller
             } else {
 
                 UnitsEvent::dispatch(getUnitAuthId(), [
+                    'pairQueueId' => $pairId,
                     'account_id' => $item['account_id'],
                     'latest_equity' => $item['latest_equity'],
                     'purchase_type' => $item['purchase_type'],

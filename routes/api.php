@@ -19,6 +19,7 @@ use App\Http\Controllers\TradingUnitsController;
 use App\Http\Controllers\UserEntityController;
 use App\Models\AccountsPairingJob;
 use App\Models\FundersMetadata;
+use App\Models\TradeReport;
 use App\Models\TradingUnitQueueModel;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -219,7 +220,12 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
 //        \App\Models\Funder::where('user_id', auth()->id())->delete();
 
-        dd(getUnitAuthId());
+        $item1 = TradeReport::where('id', 16)->first();
+        $item2 = TradeReport::where('id', 17)->first();
+
+        !d($item1->status, $item2->status);
+
+        die();
 
 //        return response()->json(['test2' => 3]);
     });

@@ -15,7 +15,7 @@ function getQueueUnitIdMachine($data, $index = 0, $type = 'unit')
     return ($type === 'unit')? $item[1] : $item[0];
 }
 
-function getQueueUnitId($units, $unit, $getPairedId = false)
+function getQueueUnitId($units, $unit, $getPairedId = false, $type = 'unit')
 {
     $items = explode(',', $units);
     $ids = [];
@@ -25,12 +25,21 @@ function getQueueUnitId($units, $unit, $getPairedId = false)
         $ids[$itemArr[1]] = $itemArr[0];
     }
 
-    if ($getPairedId) { // get the paired ID
+    if ($getPairedId) { // get the paired ID/Unit
         unset($ids[$unit]);
-        $id = array_keys($ids);
+
+        if ($type === 'unit') {
+            $id = array_keys($ids);
+            return $id[0];
+        }
+        $id = array_values($ids);
         return $id[0];
     }
-    return $ids[$unit]; // get own ID
+
+    if ($type === 'unit') {
+        return $unit;
+    }
+    return $ids[$unit]; // get own ID/Unit
 }
 
 function getUnitAuthId()
