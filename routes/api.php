@@ -81,6 +81,16 @@ Route::middleware(['auth:sanctum', 'ability:admin,investor'])->group(function()
     {
         Route::get('funders', 'list');
     });
+
+    Route::controller(TradingIndividualsController::class)->group(function()
+    {
+        Route::get('trading-individuals', 'getTradingIndividuals');
+    });
+
+    Route::controller(TradingAccountCredential::class)->group(function()
+    {
+        Route::get('credentials', 'getCredentials');
+    });
 });
 Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 {
@@ -131,7 +141,6 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 
     Route::controller(TradingIndividualsController::class)->group(function()
     {
-        Route::get('trading-individuals', 'getTradingIndividuals');
         Route::post('trading-individual', 'store');
         Route::get('trading-individual/{id}', 'edit');
         Route::post('trading-individual/{id}', 'update');
@@ -141,7 +150,6 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 
     Route::controller(TradingAccountCredential::class)->group(function()
     {
-        Route::get('credentials', 'getCredentials');
         Route::post('credential', 'store');
         Route::delete('credential/{id}', 'destroy');
         Route::get('credential/{id}', 'edit');
