@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\CalculationsController;
+use App\Http\Controllers\FunderAccountCredentialController;
 use App\Http\Controllers\FunderController;
 use App\Http\Controllers\MachinesController;
 use App\Http\Controllers\PusherController;
@@ -19,13 +20,14 @@ use App\Http\Controllers\TradingUnitsController;
 use App\Http\Controllers\UserEntityController;
 use App\Models\AccountsPairingJob;
 use App\Models\FundersMetadata;
+use App\Models\SubAccountsModel;
 use App\Models\TradeReport;
 use App\Models\TradingUnitQueueModel;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\SubAccountsController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -39,7 +41,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/token/create', [AuthenticatedSessionController::class, 'createToken']);
 
-Route::post('/auth-user', [AuthenticatedSessionController::class, 'authenticateUserToken'])->middleware(['auth:sanctum', 'ability:admin']);
+Route::post('/auth-user', [AuthenticatedSessionController::class, 'authenticateUserToken'])->middleware(['auth:sanctum', 'ability:admin,investor']);
 
 Route::post('/register', [RegisteredUserController::class, 'store'])
     ->middleware('guest')
@@ -73,8 +75,24 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->middleware('auth')
     ->name('logout');
 
+Route::middleware(['auth:sanctum', 'ability:admin,investor'])->group(function()
+{
+    Route::controller(FunderController::class)->group(function()
+    {
+        Route::get('funders', 'list');
+    });
+});
 Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 {
+    Route::controller(SubAccountsController::class)->prefix('sub-account/')->group(function()
+    {
+        Route::get('list', 'getSubAccounts');
+        Route::get('{id}', 'edit');
+        Route::post('', 'store');
+        Route::patch('{id}', 'update');
+        Route::delete('{id}', 'destroy');
+    });
+
     Route::get('account/entities', [UserEntityController::class, 'getAccountEntities']);
 //    Route::get('account/entities/individuals-and-funders', [UserEntityController::class, 'getUserIndividualsAndFunders']);
 
@@ -106,7 +124,6 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
     Route::controller(FunderController::class)->group(function()
     {
         Route::post('funder', 'store');
-        Route::get('funders', 'list');
         Route::get('funder/{id}', 'edit');
         Route::post('funder/{id}', 'update');
         Route::delete('funder/{id}', 'destroy');
@@ -134,6 +151,11 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 
 Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 {
+    Route::controller(FunderAccountCredentialController::class)->group(function()
+    {
+        Route::post('credential/funder/account', 'store');
+    });
+
     Route::controller(TradeReportController::class)->group(function()
     {
         Route::get('trade/reports', 'getReports');
@@ -178,6 +200,35 @@ Route::post('/broadcasting/auth', function (Request $request) {
     return Broadcast::auth($request);
 });
 
+Route::middleware(['auth:sanctum', 'ability:admin,investor'])->group(function()
+{
+    Route::get('trade/history/weekly', [\App\Http\Controllers\TradeHistoryController::class, 'getWeeklyTrades']);
+    Route::get('trade/history', [\App\Http\Controllers\TradeHistoryController::class, 'getAllTrades']);
+});
+
+
+Route::middleware(['auth:sanctum', 'ability:admin,investor'])->group(function()
+{
+    Route::controller(\App\Http\Controllers\InvestorController::class)->prefix('investor')->group(function()
+    {
+        Route::get('ongoing-trades', 'getOngoingTrades');
+    });
+
+    Route::controller(\App\Http\Controllers\TradeHistoryController::class)->prefix('trade-history')->group(function()
+    {
+        Route::get('list', 'getTradeHistory');
+    });
+});
+
+Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
+{
+    Route::controller(\App\Http\Controllers\TradeHistoryController::class)->prefix('trade-history')->group(function()
+    {
+        Route::post('dev/add-trade-history', 'devAddTradeHistory');
+    });
+
+});
+
 Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 {
     Route::get('test', function()
@@ -220,11 +271,20 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
 //        \App\Models\Funder::where('user_id', auth()->id())->delete();
 
-        $item1 = TradeReport::where('id', 16)->first();
-        $item2 = TradeReport::where('id', 17)->first();
+        !d(auth()->user()->account_id);
+        !d(Carbon::now()->startOfWeek());
 
-        !d($item1->status, $item2->status);
+        $items = \App\Models\TradeHistoryModel::where('account_id', auth()->user()->account_id)
+            ->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()])
+            ->get()->toArray();
 
+        $dailyProfits = [];
+
+        foreach ($items as $item) {
+
+        }
+
+        !d($items);
         die();
 
 //        return response()->json(['test2' => 3]);
@@ -234,9 +294,11 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
 //Route::post('create-permission', function()
 //{
-//    $role = \Spatie\Permission\Models\Role::create(['name' => 'unit']);
-//    $permission = \Spatie\Permission\Models\Permission::create(['name' => 'unit']);
+//    $role = \Spatie\Permission\Models\Role::create(['name' => 'investor']);
+//    $permission = \Spatie\Permission\Models\Permission::create(['name' => 'investor']);
 //
 //    $role->givePermissionTo($permission);
 //    $permission->assignRole($role);
+//
+//    return response()->json('permission created');
 //});

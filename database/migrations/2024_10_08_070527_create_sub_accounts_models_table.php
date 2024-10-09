@@ -1,0 +1,38 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('sub_accounts_models', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('account_id');
+            $table->foreign('account_id')->references('id')->on('accounts')->onDelete('cascade');
+            $table->unsignedBigInteger('unit_user_id');
+            $table->foreign('unit_user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->string('status');
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('sub_accounts_models', function (Blueprint $table) {
+            $table->dropForeign(['account_id']);
+            $table->dropColumn('account_id');
+            $table->dropForeign(['unit_user_id']);
+            $table->dropColumn('unit_user_id');
+        });
+        Schema::dropIfExists('sub_accounts_models');
+    }
+};

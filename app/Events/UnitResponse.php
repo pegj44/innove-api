@@ -16,14 +16,16 @@ class UnitResponse implements ShouldBroadcast
 
     public $action;
     public $userId;
+    public $arguments;
 
     /**
      * Create a new event instance.
      */
-    public function __construct($userId, $action)
+    public function __construct($userId, $arguments = [], $action = '')
     {
         $this->action = $action;
         $this->userId = $userId;
+        $this->arguments = $arguments;
     }
 
     /**

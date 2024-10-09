@@ -68,16 +68,31 @@ class AuthenticatedSessionController extends Controller
         ]);
 
         if (Auth::attempt($request->only('email', 'password'))) {
-
-            $tokenName = env('ADMIN_TOKEN_NAME');
             $user = Auth::user();
-            $token = $user->createToken($tokenName, ['admin'])->plainTextToken;
+
+            $permissions = auth()->user()->getAllPermissions()->pluck('name')->toArray();
+            $isOwner = auth()->user()->is_owner;
+            $apiAbility = 'guest';
+            $tokenName = 'guest';
+
+            if ($isOwner) {
+                $apiAbility = 'admin';
+                $tokenName = env('ADMIN_TOKEN_NAME');
+            } elseif (in_array('investor', $permissions)) {
+                $apiAbility = 'investor';
+                $tokenName = 'innove-investor-api';
+            }
+
+            $token = $user->createToken($tokenName, [$apiAbility])->plainTextToken;
 
             return response()->json([
                 'token' => $token,
                 'userId' => $user->id,
+                'accountId' => $user->account_id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'permissions' => auth()->user()->getAllPermissions()->pluck('name')->toArray(),
+                'isOwner' => auth()->user()->is_owner
             ]);
         }
 
