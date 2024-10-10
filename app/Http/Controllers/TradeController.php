@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\UnitResponse;
 use App\Events\UnitsEvent;
 use App\Models\PairedItems;
+use App\Models\TradeHistoryModel;
 use App\Models\TradeReport;
 use App\Models\TradingUnitQueueModel;
 use Carbon\Carbon;
@@ -58,6 +59,18 @@ class TradeController extends Controller
         return response()->json(0);
     }
 
+    private function recordTradeHistory($tradeAccountId, $startingDailyEquity, $latestEquity)
+    {
+        $tradeHistory = new TradeHistoryModel();
+        $tradeHistory->account_id = auth()->user()->account_id;
+        $tradeHistory->trade_account_credential_id = $tradeAccountId;
+        $tradeHistory->starting_daily_equity = (float) $startingDailyEquity;
+        $tradeHistory->latest_equity = (float) $latestEquity;
+        $tradeHistory->save();
+
+        return response()->json(1);
+    }
+
     private function closeTradingPositionQueue($id1, $id2, $pairQueueId, $UnitMatch)
     {
         $item1 = TradeReport::where('id', $id1)->first();
@@ -72,18 +85,11 @@ class TradeController extends Controller
             $trade->delete();
             $UnitMatch->delete();
 
-            info(print_r([
-                'closeTradingPositionQueue2' => 'delete',
-                '$pairQueueId' => $pairQueueId
-            ], true));
+            $this->recordTradeHistory($item1->trade_account_credential_id, $item1->starting_daily_equity, $item1->latest_equity);
+            $this->recordTradeHistory($item2->trade_account_credential_id, $item2->starting_daily_equity, $item2->latest_equity);
 
             UnitResponse::dispatch(auth()->user()->account_id, [], 'trade-closed');
         }
-
-        info(print_r([
-            'closeTradingPositionQueue1' => 'no delete',
-            '$pairQueueId' => $pairQueueId
-        ], true));
 
         return false;
     }

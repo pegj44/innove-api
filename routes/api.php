@@ -162,6 +162,10 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
     Route::controller(FunderAccountCredentialController::class)->group(function()
     {
         Route::post('credential/funder/account', 'store');
+        Route::get('credential/funder/accounts', 'getFunderCredentialAccounts');
+        Route::get('credential/funder/account/{id}', 'getFunderCredentialAccount');
+        Route::put('credential/funder/account/{id}', 'updateFunderCredentialAccount');
+        Route::delete('credential/funder/account/{id}', 'destroyFunderCredentialAccount');
     });
 
     Route::controller(TradeReportController::class)->group(function()

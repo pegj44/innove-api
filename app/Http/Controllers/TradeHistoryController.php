@@ -44,8 +44,6 @@ class TradeHistoryController extends Controller
         $tradeHistory->trade_account_credential_id = $tradeAccount->id;
         $tradeHistory->starting_daily_equity = (float) $request->get('startingDailyEquity');
         $tradeHistory->latest_equity = (float) $request->get('latestEquity');
-//        $tradeHistory->created_at = $request->get('date');
-//        $tradeHistory->updated_at = $request->get('date');
         $tradeHistory->save();
 
         return response()->json($request->all());
