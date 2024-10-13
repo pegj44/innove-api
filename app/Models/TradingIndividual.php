@@ -39,6 +39,11 @@ class TradingIndividual extends Model
         return $this->hasMany(TradingAccountCredential::class, 'individual_id');
     }
 
+    public function funderAccountCredential()
+    {
+        return $this->hasMany(FunderAccountCredentialModel::class, 'trading_individual_id');
+    }
+
     public function createMeta($data)
     {
         if (empty($data->metaData)) {

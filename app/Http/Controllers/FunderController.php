@@ -103,6 +103,9 @@ class FunderController extends Controller
             $funder->platform_login_password = (!empty($data['platform_login_password']))? $data['platform_login_password'] : '';
             $funder->reset_time = $data['reset_time'];
             $funder->reset_time_zone = $data['reset_time_zone'];
+            if (!empty($data['background_color']) || $data['text_color']) {
+                $funder->theme = $data['background_color'] .'|'. $data['text_color'];
+            }
             $funder->metaData = $data;
 
             $isCreated = $funder->save();
@@ -154,6 +157,7 @@ class FunderController extends Controller
                 'alias' => $funder->alias,
                 'platform_login_username' => $funder->platform_login_username,
                 'platform_login_password' => $funder->platform_login_password,
+                'theme' => $funder->theme,
                 'reset_time' => $funder->reset_time,
                 'reset_time_zone' => $funder->reset_time_zone,
                 'created_at' => $funder->created_at,
@@ -191,6 +195,9 @@ class FunderController extends Controller
             $funder->platform_login_password = (!empty($data['platform_login_password']))? $data['platform_login_password'] : '';
             $funder->reset_time = $data['reset_time'];
             $funder->reset_time_zone = $data['reset_time_zone'];
+            if (!empty($data['background_color']) || $data['text_color']) {
+                $funder->theme = $data['background_color'] .'|'. $data['text_color'];
+            }
             $funder->metaData = $data;
 
             $success = $funder->update();

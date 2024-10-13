@@ -283,20 +283,14 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
 //        \App\Models\Funder::where('user_id', auth()->id())->delete();
 
-        !d(auth()->user()->account_id);
-        !d(Carbon::now()->startOfWeek());
+        $unitItem = TradeReport::with('funder', 'tradingAccountCredential.userAccount.funderAccountCredential')
+            ->where('id', 16)
+            ->where('account_id', 5)
+            ->first();
 
-        $items = \App\Models\TradeHistoryModel::where('account_id', auth()->user()->account_id)
-            ->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()])
-            ->get()->toArray();
+        !d(getFunderAccountCredential($unitItem));
+        !d($unitItem);
 
-        $dailyProfits = [];
-
-        foreach ($items as $item) {
-
-        }
-
-        !d($items);
         die();
 
 //        return response()->json(['test2' => 3]);

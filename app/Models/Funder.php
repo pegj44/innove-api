@@ -19,7 +19,8 @@ class Funder extends Model
         'platform_login_username' => '',
         'platform_login_password' => '',
         'reset_time' => '',
-        'reset_time_zone' => ''
+        'reset_time_zone' => '',
+        'theme' => ''
     ];
 
     public $metaData;

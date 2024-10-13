@@ -7,6 +7,7 @@ use App\Events\UnitsEvent;
 use App\Models\PairedItems;
 use App\Models\TradeHistoryModel;
 use App\Models\TradeReport;
+use App\Models\TradingIndividual;
 use App\Models\TradingUnitQueueModel;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -216,10 +217,12 @@ class TradeController extends Controller
 
         foreach ($data as $key => $item) {
 
-            $unitItem = TradeReport::with('funder')
+            $unitItem = TradeReport::with('funder', 'tradingAccountCredential.userAccount.funderAccountCredential')
                 ->where('id', $item['id'])
                 ->where('account_id', auth()->user()->account_id)
                 ->first();
+
+            $credential = getFunderAccountCredential($unitItem);
 
             UnitsEvent::dispatch(getUnitAuthId(), [
                 'pairQueueId' => $pairId,
@@ -234,6 +237,8 @@ class TradeController extends Controller
                 'machine' => $item['machine'],
                 'unit' => $item['unit'],
                 'itemId' => $item['id'],
+                'loginUsername' => $credential['loginUsername'],
+                'loginPassword' => $credential['loginPassword']
             ], 'initiate-trade', $item['machine'], $item['unit']);
 
             $unitItem->purchase_type = $item['purchase_type'];

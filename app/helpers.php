@@ -7,6 +7,23 @@
 //    ], true));
 //}
 
+function getFunderAccountCredential($data)
+{
+    $data = $data->toArray();
+    $funderId = $data['trading_account_credential']['funder_id'];
+
+    foreach ($data['trading_account_credential']['user_account']['funder_account_credential'] as $item) {
+        if ($item['funder_id'] === $funderId) {
+            return [
+                'loginUsername' => $item['platform_login_username'],
+                'loginPassword' => $item['platform_login_password']
+            ];
+        }
+    }
+
+    return false;
+}
+
 function getQueueUnitIdMachine($data, $index = 0, $type = 'unit')
 {
     $items = explode(',', $data);

@@ -46,11 +46,11 @@ class TradePairAccountsController extends Controller
         $item = PairedItems::where('id', $id)->first();
 
         $item1 = TradeReport::where('id', $request->get('pair1'))->first();
-        $item1->status = 'idle';
+        $item1->status = 'pairing';
         $item1->update();
 
         $item2 = TradeReport::where('id', $request->get('pair2'))->first();
-        $item2->status = 'idle';
+        $item2->status = 'pairing';
         $item2->update();
 
         if ($request->get('updateStatus')) {
