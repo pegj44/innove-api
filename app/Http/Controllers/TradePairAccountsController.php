@@ -17,6 +17,12 @@ class TradePairAccountsController extends Controller
     public static $stopLossTicks = 51;
     public static $breachAllowanceAmount = 50;
 
+    public function removeAllAccountPairs()
+    {
+        $items = PairedItems::where(auth()->user()->account_id);
+        $items->delete();
+    }
+    
     public function pairManual(Request $request)
     {
         $ids = explode(',', $request->get('paired-ids'));
