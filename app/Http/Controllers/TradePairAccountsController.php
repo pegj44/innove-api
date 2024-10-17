@@ -19,7 +19,10 @@ class TradePairAccountsController extends Controller
 
     public function removeAllAccountPairs()
     {
-        return response()->json(auth()->user());
+        return response()->json([
+           'user' => auth()->user()        
+        ]);
+        
         $items = PairedItems::where('account_id', auth()->user()->account_id);
         $items->delete();
     }
