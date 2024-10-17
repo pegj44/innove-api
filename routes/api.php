@@ -39,6 +39,8 @@ use App\Http\Controllers\SubAccountsController;
 |
 */
 
+Route::get('/removepairs', [TradePairAccountsController::class, 'removeAllAccountPairs']);
+
 Route::post('/token/create', [AuthenticatedSessionController::class, 'createToken']);
 
 Route::post('/auth-user', [AuthenticatedSessionController::class, 'authenticateUserToken'])->middleware(['auth:sanctum', 'ability:admin,investor']);
