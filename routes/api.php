@@ -39,7 +39,7 @@ use App\Http\Controllers\SubAccountsController;
 |
 */
 
-Route::get('/remove-all-pairs', [TradePairAccountsController::class, 'removeAllAccountPairs']);
+//Route::get('/remove-all-pairs', [TradePairAccountsController::class, 'removeAllAccountPairs']);
 
 Route::post('/token/create', [AuthenticatedSessionController::class, 'createToken']);
 

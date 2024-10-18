@@ -224,11 +224,21 @@ class TradeController extends Controller
 
             $credential = getFunderAccountCredential($unitItem);
 
+            $purchase_type = $item['purchase_type'];
+
+            if ($purchase_type === 'buy-cross-phase') {
+                $purchase_type = 'buy';
+            }
+
+            if ($purchase_type === 'sell-cross-phase') {
+                $purchase_type = 'sell';
+            }
+
             UnitsEvent::dispatch(getUnitAuthId(), [
                 'pairQueueId' => $pairId,
                 'account_id' => $item['account_id'],
                 'latest_equity' => $item['latest_equity'],
-                'purchase_type' => $item['purchase_type'],
+                'purchase_type' => $purchase_type,
                 'symbol' => $item['symbol'],
                 'order_amount' => $item['order_amount'],
                 'take_profit_ticks' => $item['take_profit_ticks'],
@@ -241,7 +251,7 @@ class TradeController extends Controller
                 'loginPassword' => $credential['loginPassword']
             ], 'initiate-trade', $item['machine'], $item['unit']);
 
-            $unitItem->purchase_type = $item['purchase_type'];
+            $unitItem->purchase_type = $purchase_type;
             $unitItem->order_amount = $item['order_amount'];
             $unitItem->take_profit_ticks = $item['take_profit_ticks'];
             $unitItem->stop_loss_ticks = $item['stop_loss_ticks'];
