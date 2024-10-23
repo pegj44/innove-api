@@ -251,7 +251,7 @@ class TradeController extends Controller
                 'loginPassword' => $credential['loginPassword']
             ], 'initiate-trade', $item['machine'], $item['unit']);
 
-            $unitItem->purchase_type = $purchase_type;
+            $unitItem->purchase_type = $item['purchase_type'];
             $unitItem->order_amount = $item['order_amount'];
             $unitItem->take_profit_ticks = $item['take_profit_ticks'];
             $unitItem->stop_loss_ticks = $item['stop_loss_ticks'];
@@ -265,23 +265,6 @@ class TradeController extends Controller
 
         $pairedItems->status = 'trading';
         $pairedItems->update();
-
-
-//        $unit1 = TradeReport::where('id', $data['unit1']['id'])->where('account_id', auth()->user()->account_id)->first();
-//        $unit1->purchase_type = $data['unit1']['purchase_type'];
-//        $unit1->order_amount = $data['unit1']['order_amount'];
-//        $unit1->take_profit_ticks = $data['unit1']['take_profit_ticks'];
-//        $unit1->stop_loss_ticks = $data['unit1']['stop_loss_ticks'];
-//        $unit1->status = 'trading';
-//        $unit1->update();
-//
-//        $unit2 = TradeReport::where('id', $data['unit2']['id'])->where('account_id', auth()->user()->account_id)->first();
-//        $unit2->purchase_type = $data['unit2']['purchase_type'];
-//        $unit2->order_amount = $data['unit2']['order_amount'];
-//        $unit2->take_profit_ticks = $data['unit2']['take_profit_ticks'];
-//        $unit2->stop_loss_ticks = $data['unit2']['stop_loss_ticks'];
-//        $unit2->status = 'trading';
-//        $unit2->update();
 
         return response()->json(['message' => __('Initiating unit trade.')]);
     }

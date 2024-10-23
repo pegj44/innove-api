@@ -3,18 +3,37 @@
 namespace App\Http\Controllers;
 
 use App\Models\TradeHistoryModel;
+use App\Models\TradeReport;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class TradeHistoryController extends Controller
 {
-    public function getAllTrades()
+    public function getAllTrades(Request $request)
     {
-        $items = \App\Models\TradeHistoryModel::with('tradingAccountCredential')
-            ->where('account_id', auth()->user()->account_id)
-            ->get()->toArray();
+        $data = $request->all();
+        $phase = ($request->get('current_phase')) ? $data['current_phase'] : null;
+        $items = \App\Models\TradeHistoryModel::with(['tradingAccountCredential.funder', 'tradingAccountCredential.tradeReports'])
+            ->where('account_id', auth()->user()->account_id);
 
-        return response()->json($items);
+        if ($phase) {
+            $items->whereHas('tradingAccountCredential', function($query) use ($phase) {
+                $query->where('current_phase', $phase);
+            });
+        }
+
+        if ($request->get('range')) {
+            if ($data['range'] === 'currentMonth') {
+                $items->whereMonth('created_at', Carbon::now()->month);
+            }
+        }
+
+        $orderBy = ($request->get('orderBy'))? $data['orderBy'] : 'created_at';
+        $order = ($request->get('order'))? $data['order'] : 'desc';
+
+        $items->orderBy($orderBy, $order);
+
+        return response()->json($items->get()->toArray());
     }
 
     public function getWeeklyTrades()
@@ -30,7 +49,9 @@ class TradeHistoryController extends Controller
     public function getTradeHistory()
     {
         $items = TradeHistoryModel::with('tradingAccountCredential.funder')
-            ->where('account_id', auth()->user()->account_id)->get();
+            ->where('account_id', auth()->user()->account_id)
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         return response()->json($items);
     }

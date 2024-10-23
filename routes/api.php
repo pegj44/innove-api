@@ -23,9 +23,11 @@ use App\Models\FundersMetadata;
 use App\Models\SubAccountsModel;
 use App\Models\TradeReport;
 use App\Models\TradingUnitQueueModel;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SubAccountsController;
 /*
@@ -93,14 +95,30 @@ Route::middleware(['auth:sanctum', 'ability:admin,investor'])->group(function()
     {
         Route::get('credentials', 'getCredentials');
     });
+
+    Route::controller(TradeReportController::class)->group(function()
+    {
+        Route::get('trade/reports', 'getReports');
+    });
+
+    Route::controller(TradePairAccountsController::class)->group(function()
+    {
+        Route::get('trade/paired-items', 'getPairedItems');
+    });
 });
 Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 {
+    Route::controller(\App\Http\Controllers\PayoutController::class)->prefix('trade/')->group(function()
+    {
+        Route::post('payout', 'store');
+        Route::put('payout/{id}', 'update');
+    });
+
     Route::controller(SubAccountsController::class)->prefix('sub-account/')->group(function()
     {
         Route::get('list', 'getSubAccounts');
         Route::get('{id}', 'edit');
-        Route::post('', 'store');
+        Route::post('create', 'store');
         Route::patch('{id}', 'update');
         Route::delete('{id}', 'destroy');
     });
@@ -114,7 +132,6 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 //        Route::post('/starting-equity/update/status', 'updateStartingEquityJobStatus');
         Route::post('/pair-accounts', 'pairAccounts');
         Route::post('/pair-manual', 'pairManual');
-        Route::get('/paired-items', 'getPairedItems');
         Route::post('/update-trade-report-settings', 'updateTradeSettings');
         Route::delete('/paired-items', 'clearPairedItems');
         Route::delete('/pair/{id}/remove', 'removePair');
@@ -172,7 +189,6 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
     Route::controller(TradeReportController::class)->group(function()
     {
-        Route::get('trade/reports', 'getReports');
         Route::post('trade/report', 'store');
         Route::post('trade/report/latest-equity/update', 'updateLatestEquity');
 
@@ -218,6 +234,8 @@ Route::middleware(['auth:sanctum', 'ability:admin,investor'])->group(function()
 {
     Route::get('trade/history/weekly', [\App\Http\Controllers\TradeHistoryController::class, 'getWeeklyTrades']);
     Route::get('trade/history', [\App\Http\Controllers\TradeHistoryController::class, 'getAllTrades']);
+    Route::get('trade/payouts', [\App\Http\Controllers\PayoutController::class, 'getPayouts']);
+    Route::get('trade/payout/{id}', [\App\Http\Controllers\PayoutController::class, 'getPayout']);
 });
 
 
@@ -285,15 +303,29 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
 //        \App\Models\Funder::where('user_id', auth()->id())->delete();
 
-        $unitItem = TradeReport::with('funder', 'tradingAccountCredential.userAccount.funderAccountCredential')
-            ->where('id', 16)
-            ->where('account_id', 5)
-            ->first();
 
-        !d(getFunderAccountCredential($unitItem));
-        !d($unitItem);
 
-        die();
+
+
+//        $email = 'odrokie@gmail.com';
+//        $newPassword = 'Innove421!!3';
+//
+//        // Find the user by email
+//        $user = User::where('email', $email)->first();
+//
+//        if (!$user) {
+//            $this->error('User not found!');
+//            return 1;
+//        }
+//
+//        // Update the user's password
+//        $user->password = Hash::make($newPassword);
+//        $user->save();
+//
+//        // Display a success message
+//        var_dump('Password has been successfully updated for user: ' . $email);
+//
+//        die();
 
 //        return response()->json(['test2' => 3]);
     });

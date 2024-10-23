@@ -75,6 +75,6 @@ class TradingAccountCredential extends Model
 
     public function tradeReports()
     {
-        return $this->hasMany(TradeReport::class);
+        return $this->hasOne(TradeReport::class, 'trade_account_credential_id');
     }
 }

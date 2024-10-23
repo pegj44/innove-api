@@ -10,16 +10,26 @@ use Illuminate\Support\Facades\Validator;
 
 class TradeReportController extends Controller
 {
-    public function getReports()
+    public function getReports(Request $request)
     {
+        $data = $request->all();
         $items = TradeReport::with('tradingAccountCredential.userAccount.tradingUnit', 'tradingAccountCredential.funder.metadata', 'tradingAccountCredential.userAccount.funderAccountCredential')
             ->where('account_id', auth()->user()->account_id)
             ->whereHas('tradingAccountCredential', function($query) {
                 $query->where('status', 'active');
-            })
-            ->get();
+            });
 
-        return response()->json($items);
+        if ($request->get('current_phase')) {
+            $items->whereHas('tradingAccountCredential', function($query) use ($data) {
+                $query->where('current_phase', $data['current_phase']);
+            });
+        }
+
+        if ($request->get('tradingAccountIds')) {
+            $items->whereIn('trade_account_credential_id', $data['tradingAccountIds']);
+        }
+
+        return response()->json($items->get());
     }
 
     public function updateLatestEquity(Request $request)
