@@ -25,6 +25,7 @@ class FunderController extends Controller
                 'account_id' => $funder->account_id,
                 'name' => $funder->name,
                 'alias' => $funder->alias,
+                'theme' => $funder->theme,
                 'reset_time' => $funder->reset_time,
                 'reset_time_zone' => $funder->reset_time_zone,
                 'created_at' => $funder->created_at,

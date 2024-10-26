@@ -1,5 +1,6 @@
 <?php
 
+use App\Events\UnitResponse;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\NewPasswordController;
@@ -27,9 +28,12 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SubAccountsController;
+use Illuminate\Support\Str;
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -81,6 +85,21 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
 
 Route::middleware(['auth:sanctum', 'ability:admin,investor'])->group(function()
 {
+    Route::controller(\App\Http\Controllers\UserProfileController::class)->prefix('profile')->group(function()
+    {
+        Route::get('/{id}', 'getProfile');
+        Route::post('/add', 'storeProfile');
+        Route::put('/{id}', 'updateProfile');
+    });
+
+    Route::controller(\App\Http\Controllers\UserSettingsController::class)->prefix('user/settings/')->group(function()
+    {
+        Route::get('', 'getSettings');
+        Route::post('save', 'store');
+        Route::put('update', 'update');
+        Route::delete('{id}', 'destroy');
+    });
+
     Route::controller(FunderController::class)->group(function()
     {
         Route::get('funders', 'list');
@@ -254,61 +273,71 @@ Route::middleware(['auth:sanctum', 'ability:admin,investor'])->group(function()
 
 Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 {
+    Route::controller(\App\Http\Controllers\TradeHistoryV2::class)->prefix('trade/history-v2/')->group(function()
+    {
+        Route::post('store', 'store');
+        Route::get('{id}', 'getHistoryItem');
+        Route::delete('{id}', 'destroy');
+    });
+
     Route::controller(\App\Http\Controllers\TradeHistoryController::class)->prefix('trade-history')->group(function()
     {
+        Route::post('/add', 'store');
+        Route::get('/{id}', 'getHistoryItem');
+        Route::put('/{id}', 'update');
+        Route::delete('/{id}', 'destroy');
         Route::post('dev/add-trade-history', 'devAddTradeHistory');
+
+    });
+
+    Route::controller(TradingAccountCredential::class)->prefix('dev/')->group(function()
+    {
+        Route::post('bulk-update-funder-target-profit', 'bulkUpdateFunderTargetProfit');
     });
 
 });
 
 Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 {
-    Route::get('test', function()
+    Route::post('dev', function(Request $request)
     {
-//        $machines = MachinesController::getAvailableMachine(3, '120.28.220.253');
+//        UnitResponse::dispatch(auth()->user()->account_id, [], 'trade-started');
+        UnitResponse::dispatch(auth()->user()->account_id, [], $request->get('action'));
 
-//        $items = \App\Models\TradeReport::with('tradingAccountCredential.tradingIndividual.tradingUnit', 'tradingAccountCredential.funder.metadata')
-//            ->where('user_id', auth()->id())
-//            ->whereHas('tradingAccountCredential', function ($query) {
-//                $query->whereIn('account_id', ['14178', 'UPTN258956']);
-//            })
-//            ->where('status', 'idle')
-//            ->get();
-//
-//        foreach ($items as $item) {
-//            $funderMeta = $item['tradingAccountCredential']['funder']['metadata'];
-//            $pipsCalculationType = '';
-//            $pips = 1; // default pips
-//
-//            foreach ($funderMeta as $meta) {
-//                if ($meta->key === 'pips_calculation_type') {
-//                    $pipsCalculationType = $meta->value;
-//                }
-//            }
-//
-//            if ($pipsCalculationType === 'volume') {
-//                $pips = CalculationsController::calculateVolume($item->latest_equity, 5.1);
-//            }
-//
-//            var_dump($pips);
-//        }
-
-
-//        $funderMeta = FundersMetadata::where('funder_id', 15)
-//            ->where('key', 'purchase_type')->first();
-
-//        $output = TradePairAccountsController::getCalculatedOrderAmount('300', 'fixed', '30400', '30400', 'currency');
-
-//        dd($output);
-
-//        \App\Models\Funder::where('user_id', auth()->id())->delete();
+        echo 'trade started notification';
+        die();
 
 
 
 
+
+        $funderAccountName = $request->get('funder_account_id');
+
+
+        $item = \App\Models\TradeHistoryModel::with('tradingAccountCredential')
+            ->where('account_id', auth()->user()->account_id)
+            ->whereHas('tradingAccountCredential', function($query) use ($funderAccountName) {
+                $query->where('funder_account_id', $funderAccountName);
+            });
+
+        $sql = Str::replaceArray('?', $item->getBindings(), $item->toSql());
+
+        !d($sql);
+        !d($item->get());
+        die();
+
+//        !d($funderAccountName, auth()->user()->account_id, $item);
+//        die();
+
+
+
+
+
+
+// Change password
 
 //        $email = 'odrokie@gmail.com';
-//        $newPassword = 'Innove421!!3';
+//        $newPassword = 'newpasss';
 //
 //        // Find the user by email
 //        $user = User::where('email', $email)->first();

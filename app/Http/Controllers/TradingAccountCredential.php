@@ -14,7 +14,7 @@ class TradingAccountCredential extends Controller
      */
     public function getCredentials()
     {
-        $credentials = TradingAccountCredentialModel::with(['funder.metadata', 'userAccount.tradingUnit'])
+        $credentials = TradingAccountCredentialModel::with(['funder.metadata', 'userAccount.tradingUnit', 'tradeReports'])
             ->where('account_id', auth()->user()->account_id)
             ->get();
 
@@ -163,5 +163,18 @@ class TradingAccountCredential extends Controller
 
             return response()->json(['errors' => 'Error deleting the item.']);
         }
+    }
+
+    public function bulkUpdateFunderTargetProfit(Request $request)
+    {
+        $items = TradingAccountCredentialModel::where('funder_id', $request->get('funder_id'))
+            ->where('account_id', auth()->user()->account_id)->get();
+
+        foreach ($items as $item) {
+            $item->phase_3_daily_target_profit = 600;
+            $item->save();
+        }
+
+        return response()->json($items);
     }
 }

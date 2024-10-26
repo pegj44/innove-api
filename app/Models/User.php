@@ -56,6 +56,11 @@ class User extends Authenticatable
         return $this->is_owner;
     }
 
+    public function settings()
+    {
+        return $this->hasMany(UserSettingsModel::class, 'user_id');
+    }
+
 //    public function units()
 //    {
 //        return $this->hasMany(TradingUnitsModel::class);

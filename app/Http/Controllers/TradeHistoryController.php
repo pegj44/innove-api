@@ -9,6 +9,89 @@ use Illuminate\Http\Request;
 
 class TradeHistoryController extends Controller
 {
+    public function destroy(string $id)
+    {
+        try {
+            $item = TradeHistoryModel::where('id', $id)->where('account_id', auth()->user()->account_id)->first();
+
+            if (!$item) {
+                return response()->json(['errors' => 'Failed to remove trade history.']);
+            }
+
+            $item->delete();
+
+            return response()->json([
+                'message' => __('Successfully removed trade history.')
+            ]);
+        } catch (\Exception $e) {
+            info(print_r([
+                'errorRemoveTradeHistory' => $e->getMessage()
+            ], true));
+
+            return response()->json(['errors' => 'Error deleting the trade history.']);
+        }
+    }
+
+    public function getHistoryItem(string $id)
+    {
+        try {
+            $item = TradeHistoryModel::with('tradingAccountCredential.tradeReports')
+                ->where('id', $id)
+                ->where('account_id', auth()->user()->account_id)->first();
+
+            return response()->json($item);
+        } catch (\Exception $e) {
+            info(print_r([
+                'errorHistory' => $e->getMessage()
+            ], true));
+            return response()->json(['errors' => __('Error retrieving data.')]);
+        }
+    }
+
+    public function update(Request $request, string $id)
+    {
+        try {
+            $item = TradeHistoryModel::where('account_id', auth()->user()->account_id)
+                    ->where('id', $id)
+                    ->first();
+
+            $item->trade_account_credential_id = $request->get('trade_account_credential_id');
+            $item->latest_equity = $request->get('latest_equity');
+            $update = $item->update();
+
+            if (!$update) {
+                return response()->json(['errors' => __('Failed to update the trade history.')]);
+            }
+
+            return response()->json(['message' => __('Successfully updated trade history.')]);
+        } catch (\Exception $e) {
+            return response()->json(['errors' => 'Error updating the trade history.']);
+        }
+    }
+
+    public function store(Request $request)
+    {
+        $item = \App\Models\TradingAccountCredential::with('tradeReports')
+            ->where('account_id', auth()->user()->account_id)
+            ->where('id', $request->get('trade_account_credential_id'))
+            ->first();
+
+        if (empty($item)) {
+            return response()->json(['error' => __('Trading account not found.')]);
+        }
+
+        $newItem = new TradeHistoryModel();
+        $newItem->account_id = auth()->user()->account_id;
+        $newItem->trade_account_credential_id = $request->get('trade_account_credential_id');
+        $newItem->starting_daily_equity = (float) $item->tradeReports->starting_daily_equity;
+        $newItem->latest_equity = (float) $request->get('latest_equity');
+        $newItem->save();
+
+
+
+        return response()->json(['message' => __('Successfully added trade history.')]);
+    }
+
     public function getAllTrades(Request $request)
     {
         $data = $request->all();

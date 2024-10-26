@@ -135,9 +135,26 @@ class TradeController extends Controller
         }
 
         if (!empty($dailyDrawdown)) {
-            if ($pnl >= ($dailyTp / 2) || $pnl <= -($dailyDrawdown/2)) {
-                return 'abstained';
+//            if ($pnl >= ($dailyTp / 2) || $pnl <= -($dailyDrawdown/2)) {
+//                return 'abstained';
+//            }
+
+            $positiveThreshold = $dailyDrawdown * 0.9;
+            $negativeThreshold = -$dailyDrawdown * 0.9;
+
+            info(print_r([
+                'tradeReport' => [
+                    '$dailyDrawdown' => $dailyDrawdown,
+                    '$positiveThreshold' => $positiveThreshold,
+                    '$negativeThreshold' => $negativeThreshold,
+                    'isAbstained' => ($pnl >= $positiveThreshold || $pnl <= $negativeThreshold)
+                ]
+            ], true));
+
+            if ($pnl >= $positiveThreshold || $pnl <= $negativeThreshold) {
+                echo 'abstained';
             }
+
         } else {
             if ($pnl >= ($dailyTp / 2)) {
                 return 'abstained';
@@ -186,6 +203,8 @@ class TradeController extends Controller
 
             $UnitMatch->unit = $UnitMatch->unit .','. $request->get('itemId') .'|'. $request->get('unit');
             $UnitMatch->update();
+
+            UnitResponse::dispatch(auth()->user()->account_id, [], 'trade-started');
         } else {
             $newQueue = new TradingUnitQueueModel();
             $newQueue->account_id = auth()->user()->account_id;

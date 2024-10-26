@@ -77,4 +77,9 @@ class TradingAccountCredential extends Model
     {
         return $this->hasOne(TradeReport::class, 'trade_account_credential_id');
     }
+
+    public function history()
+    {
+        return $this->hasOne(TradeHistoryModel::class, 'trade_account_credential_id');
+    }
 }
