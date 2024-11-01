@@ -1,6 +1,7 @@
 <?php
 
 use App\Events\UnitResponse;
+use App\Events\UnitsEvent;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\NewPasswordController;
@@ -22,6 +23,7 @@ use App\Http\Controllers\UserEntityController;
 use App\Models\AccountsPairingJob;
 use App\Models\FundersMetadata;
 use App\Models\SubAccountsModel;
+use App\Models\TradeHistoryV2Model;
 use App\Models\TradeReport;
 use App\Models\TradingUnitQueueModel;
 use App\Models\User;
@@ -95,7 +97,7 @@ Route::middleware(['auth:sanctum', 'ability:admin,investor'])->group(function()
     Route::controller(\App\Http\Controllers\UserSettingsController::class)->prefix('user/settings/')->group(function()
     {
         Route::get('', 'getSettings');
-        Route::post('save', 'store');
+        Route::post('', 'store');
         Route::put('update', 'update');
         Route::delete('{id}', 'destroy');
     });
@@ -275,7 +277,7 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 {
     Route::controller(\App\Http\Controllers\TradeHistoryV2::class)->prefix('trade/history-v2/')->group(function()
     {
-        Route::post('store', 'store');
+        Route::post('', 'store');
         Route::get('{id}', 'getHistoryItem');
         Route::delete('{id}', 'destroy');
     });
@@ -297,39 +299,74 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 
 });
 
+
+
 Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 {
+    Route::post('robot/setup/tradoverse', [TradeController::class, 'setupTradoverse']);
+
+    Route::post('/dev/trade/initiate', [\App\Http\Controllers\DevController::class, 'initiateTrade']);
+
     Route::post('dev', function(Request $request)
     {
+
+
+        UnitsEvent::dispatch(getUnitAuthId(), [
+            'TEST' => 'test1'
+        ], 'show-window', 'Tradoverse_1', '78D2671D');
+
+
+//            UnitResponse::dispatch(auth()->user()->account_id, [], 'trade-closed');
+//        UnitResponse::dispatch(auth()->user()->account_id, [], $request->get('action'));
+
+
+
+//        $id = 52;
+//        $trades = [30602.00];
+//        $startingBal = 30000;
+//        $startingDailyEqty = $startingBal;
+//
+//        $dates = [
+//            '2024-10-08 04:30:00',
+//            '2024-10-09 04:30:00',
+//            '2024-10-10 04:30:00',
+//            '2024-10-11 04:30:00',
+//            '2024-10-14 04:30:00',
+//            '2024-10-15 04:30:00',
+//            '2024-10-16 04:30:00',
+//            '2024-10-17 04:30:00',
+//            '2024-10-18 04:30:00',
+//            '2024-10-21 04:30:00',
+//            '2024-10-22 04:30:00',
+//            '2024-10-23 04:30:00',
+//            '2024-10-24 04:30:00',
+//            '2024-10-25 04:30:00',
+//        ];
+//
+//        foreach ($trades as $index => $trade) {
+//
+//            $latestEqty = $startingDailyEqty + $trade;
+//
+//            $item = new TradeHistoryV2Model();
+//            $item->trade_account_credential_id = $id;
+//            $item->starting_daily_equity = $startingDailyEqty;
+//            $item->latest_equity = $latestEqty;
+//            $item->status = '';
+//            $item->created_at = $dates[$index];
+//            $item->updated_at = $dates[$index];
+//            $item->save();
+//
+//
+//            $startingDailyEqty = $latestEqty;
+//        }
+
+
+
 //        UnitResponse::dispatch(auth()->user()->account_id, [], 'trade-started');
-        UnitResponse::dispatch(auth()->user()->account_id, [], $request->get('action'));
-
-        echo 'trade started notification';
-        die();
-
-
-
-
-
-        $funderAccountName = $request->get('funder_account_id');
-
-
-        $item = \App\Models\TradeHistoryModel::with('tradingAccountCredential')
-            ->where('account_id', auth()->user()->account_id)
-            ->whereHas('tradingAccountCredential', function($query) use ($funderAccountName) {
-                $query->where('funder_account_id', $funderAccountName);
-            });
-
-        $sql = Str::replaceArray('?', $item->getBindings(), $item->toSql());
-
-        !d($sql);
-        !d($item->get());
-        die();
-
-//        !d($funderAccountName, auth()->user()->account_id, $item);
+//        UnitResponse::dispatch(auth()->user()->account_id, [], $request->get('action'));
+//
+//        echo 'trade started notification';
 //        die();
-
-
 
 
 

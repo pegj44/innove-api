@@ -12,25 +12,17 @@ class TradeHistoryV2Model extends Model
     protected $table = 'trade_history2';
 
     protected $fillable = [
-        'account_id',
         'trade_account_credential_id',
         'starting_daily_equity',
         'latest_equity',
-        'highest_equity',
         'status'
     ];
 
     protected $attributes = [
         'starting_daily_equity' => 0,
         'latest_equity' => 0,
-        'highest_equity' => 0,
         'status' => ''
     ];
-
-    public function account()
-    {
-        return $this->belongsTo(AccountModel::class, 'account_id');
-    }
 
     public function tradingAccountCredential()
     {

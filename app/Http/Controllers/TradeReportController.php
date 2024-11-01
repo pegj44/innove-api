@@ -13,7 +13,12 @@ class TradeReportController extends Controller
     public function getReports(Request $request)
     {
         $data = $request->all();
-        $items = TradeReport::with('tradingAccountCredential.userAccount.tradingUnit', 'tradingAccountCredential.funder.metadata', 'tradingAccountCredential.userAccount.funderAccountCredential')
+        $items = TradeReport::with(
+            'tradingAccountCredential.userAccount.tradingUnit',
+            'tradingAccountCredential.funder.metadata',
+            'tradingAccountCredential.userAccount.funderAccountCredential',
+            'tradingAccountCredential.historyV2'
+        )
             ->where('account_id', auth()->user()->account_id)
             ->whereHas('tradingAccountCredential', function($query) {
                 $query->where('status', 'active');
