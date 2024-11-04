@@ -197,6 +197,20 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
     });
 });
 
+Route::middleware(['auth:sanctum', 'ability:unit'])->prefix('/unit/')->group(function()
+{
+//    Route::controller(TradeReportController::class)->group(function()
+//    {
+//        Route::post('/report/close-trade', 'reportCloseTrade');
+//    });
+
+    Route::controller(TradeController::class)->group(function()
+    {
+        Route::post('/report/close-trade', 'closePosition');
+    });
+});
+
+
 Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 {
     Route::controller(FunderAccountCredentialController::class)->group(function()
@@ -210,6 +224,8 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
     Route::controller(TradeReportController::class)->group(function()
     {
+        Route::get('/ongoing-trades/{id}', 'getOngoingTrades');
+
         Route::post('trade/report', 'store');
         Route::post('trade/report/latest-equity/update', 'updateLatestEquity');
 
@@ -309,11 +325,55 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
     Route::post('dev', function(Request $request)
     {
+//        $unitId = '';
+//
+//
+//        $items = TradeReport::with(['tradingAccountCredential.funder', 'tradingAccountCredential.userAccount.tradingUnit'])
+//            ->where('account_id', auth()->user()->account_id)
+//            ->where('status', 'trading')
+//            ->whereHas('tradingAccountCredential.userAccount.tradingUnit', function($query) use ($unitId) {
+//                $query->where('unit_id', $unitId);
+//            })
+//            ->get()
+//            ->map(function ($item) {
+//                // Assuming the funder_account_id is present in tradingAccountCredential relation
+//                $funderAccountId = $item->tradingAccountCredential->funder_account_id;
+////
+////                // Add formatted funder_account_id to each item
+////                $item->tradingAccountCredential->funder_account_id = [
+////                    'long' => $funderAccountId,
+////                    'short' => getFunderAccountShortName($funderAccountId)
+////                ];
+//
+//                $item->tradingAccountCredential->funder_account_id_short = getFunderAccountShortName($funderAccountId);
+//
+//                return $item;
+//            });
+//
+//        !d($items);
+//
+
+        $id = 9;
+
+        $unitItem = TradeReport::with('funder', 'tradingAccountCredential.userAccount.funderAccountCredential', 'tradingAccountCredential.funder')
+            ->where('id', $id)
+            ->where('account_id', auth()->user()->account_id)
+            ->first();
 
 
         UnitsEvent::dispatch(getUnitAuthId(), [
-            'TEST' => 'test1'
-        ], 'show-window', 'Tradoverse_1', '78D2671D');
+            'account_id' => $unitItem->tradingAccountCredential->funder_account_id,
+            'account_id_short' => getFunderAccountShortName($unitItem->tradingAccountCredential->funder_account_id),
+            'itemId' => $unitItem->id,
+            'funder' => [
+                'alias' => $unitItem->tradingAccountCredential->funder->alias,
+                'theme' => $unitItem->tradingAccountCredential->funder->theme
+            ]
+        ], 'initiate-trade', 'NoMachine!', '637EF8F7');
+
+
+        !d($unitItem);
+        die();
 
 
 //            UnitResponse::dispatch(auth()->user()->account_id, [], 'trade-closed');

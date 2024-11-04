@@ -13,7 +13,8 @@ class TradingUnitQueueModel extends Model
         'account_id',
         'unit',
         'machine',
-        'queue_id'
+        'queue_id',
+        'funder_account_id'
     ];
 
     public function user()

@@ -23,17 +23,26 @@ class TradeController extends Controller
 
     public function closePosition(Request $request)
     {
-        $isUnitConnected = PusherController::checkUnitConnection(getUnitAuthId(), $request->get('pairUnit'));
+        $dataRaw = $request->get('data');
+        $dataArr = explode('|', $dataRaw);
+        $dataFormatted = [];
+
+        foreach ($dataArr as $item) {
+            $subData = explode(':', $item);
+            $dataFormatted[$subData[0]] = $subData[1];
+        }
+
+        $isUnitConnected = PusherController::checkUnitConnection(getUnitAuthId(), $dataFormatted['pairUnit']);
 
         if ($isUnitConnected) {
             $UnitMatch = TradingUnitQueueModel::where('account_id', auth()->user()->account_id)
-                ->where('queue_id', $request->get('queue_id'))->first();
-            $pairUnit = getQueueUnitId($UnitMatch->unit, $request->get('pairUnit'), true);
+                ->where('queue_id', $dataFormatted['queue_id'])->first();
+            $pairUnit = getQueueUnitId($UnitMatch->unit, $dataFormatted['pairUnit'], true);
 
-            $pairUnitId = getQueueUnitId($UnitMatch->unit, $request->get('pairUnit'), false, 'id');
-            $unitId = getQueueUnitId($UnitMatch->unit, $request->get('selfUnit'), false, 'id');
+            $pairUnitId = getQueueUnitId($UnitMatch->unit, $dataFormatted['pairUnit'], false, 'id');
+            $unitId = getQueueUnitId($UnitMatch->unit, $dataFormatted['selfUnit'], false, 'id');
 
-            $this->updateLatestEquity($unitId, $request->get('latestEquity'));
+            $this->updateLatestEquity($unitId, $dataFormatted['latestEquity']);
 
             $pairAccount = TradeReport::with('tradingAccountCredential')
                 ->where('account_id', auth()->user()->account_id)
@@ -43,17 +52,17 @@ class TradeController extends Controller
             if ($pairAccount->status === 'trading') {
 
                 UnitsEvent::dispatch(getUnitAuthId(), [
-                    'pairQueueId' => $request->get('pairQueueId'),
+                    'pairQueueId' => $dataFormatted['pairQueueId'],
                     'pairUnit' => $pairUnit,
-                    'machine' => $request->get('pairUnitMachine'),
-                    'queue_id' => $request->get('queue_id'),
-                    'selfUnit' => $request->get('pairUnit')
-                ], 'close-position', $request->get('pairUnitMachine'), $request->get('pairUnit'));
+                    'machine' => $dataFormatted['pairUnitMachine'],
+                    'queue_id' => $dataFormatted['queue_id'],
+                    'selfUnit' => $dataFormatted['pairUnit']
+                ], 'close-position', $dataFormatted['pairUnitMachine'], $dataFormatted['pairUnit']);
             }
 
             // Attempt to close trading position in "Ongoing Trades"
             // tab when both trading accounts are closed.
-            $this->closeTradingPositionQueue($pairUnitId, $unitId, $request->get('pairQueueId'), $UnitMatch);
+            $this->closeTradingPositionQueue($pairUnitId, $unitId, $dataFormatted['pairQueueId'], $UnitMatch);
 
             return response()->json(1);
         }
@@ -63,13 +72,6 @@ class TradeController extends Controller
 
     private function recordTradeHistory($tradeAccountId, $startingDailyEquity, $latestEquity)
     {
-//        $tradeHistory = new TradeHistoryModel();
-//        $tradeHistory->account_id = auth()->user()->account_id;
-//        $tradeHistory->trade_account_credential_id = $tradeAccountId;
-//        $tradeHistory->starting_daily_equity = (float) $startingDailyEquity;
-//        $tradeHistory->latest_equity = (float) $latestEquity;
-//        $tradeHistory->save();
-
         $item = new TradeHistoryV2Model();
         $item->trade_account_credential_id = $tradeAccountId;
         $item->starting_daily_equity = (float) $startingDailyEquity;
@@ -235,6 +237,8 @@ class TradeController extends Controller
                 'selfUnit' => $unitMatchId,
                 'queue_id' => $request->get('queue_id'),
                 'machine' => $UnitMatch->machine,
+                'account_id' => $UnitMatch->funder_account_id,
+                'account_id_short' => getFunderAccountShortName($UnitMatch->funder_account_id),
                 'pairUnitMachine' => $request->get('machine')
             ];
 
@@ -245,10 +249,13 @@ class TradeController extends Controller
             $args['pairUnitMachine'] = $UnitMatch->machine;
             $args['pairUnit'] = $unitMatchId;
             $args['selfUnit'] = $request->get('unit');
+            $args['account_id'] = $request->get('account_id');
+            $args['account_id_short'] = getFunderAccountShortName($request->get('account_id'));
 
             UnitsEvent::dispatch(getUnitAuthId(), $args, 'do-trade', $request->get('machine'), $request->get('unit'));
 
             $UnitMatch->unit = $UnitMatch->unit .','. $request->get('itemId') .'|'. $request->get('unit');
+            $UnitMatch->funder_account_id = $UnitMatch->funder_account_id .'|'. $request->get('account_id');
             $UnitMatch->update();
 
             UnitResponse::dispatch(auth()->user()->account_id, [], 'trade-started');
@@ -259,6 +266,7 @@ class TradeController extends Controller
             $newQueue->machine = $request->get('machine');
             $newQueue->queue_id = $request->get('queue_id');
             $newQueue->purchase_type = $request->get('purchase_type');
+            $newQueue->funder_account_id = $request->get('account_id'); // the funder account id: ex: FTT-RALLY-0000
             $newQueue->save();
         }
     }
@@ -303,6 +311,7 @@ class TradeController extends Controller
             UnitsEvent::dispatch(getUnitAuthId(), [
                 'pairQueueId' => $pairId,
                 'account_id' => $item['account_id'],
+                'account_id_short' => getFunderAccountShortName($item['account_id']),
                 'latest_equity' => $item['latest_equity'],
                 'purchase_type' => $purchase_type,
                 'symbol' => $item['symbol'],
@@ -314,7 +323,11 @@ class TradeController extends Controller
                 'unit' => $item['unit'],
                 'itemId' => $item['id'],
                 'loginUsername' => $credential['loginUsername'],
-                'loginPassword' => $credential['loginPassword']
+                'loginPassword' => $credential['loginPassword'],
+                'funder' => [
+                    'alias' => $unitItem->tradingAccountCredential->funder->alias,
+                    'theme' => $unitItem->tradingAccountCredential->funder->theme
+                ]
             ], 'initiate-trade', $item['machine'], $item['unit']);
 
             $unitItem->purchase_type = $item['purchase_type'];

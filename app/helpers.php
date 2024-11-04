@@ -1,11 +1,20 @@
 <?php
 
-//function logDebug($name, $data = [])
-//{
-//    info(print_r([
-//        $name => $data
-//    ], true));
-//}
+function getFunderAccountShortName($accountId)
+{
+    $toRemove = [
+        'FTT-RALLY-',
+        'Zero\d+k-s',
+        'LV-Zero\d+k-s',
+    ];
+
+    foreach ($toRemove as $pattern) {
+        $regexPattern = '/^' . $pattern . '/';
+        $accountId = preg_replace($regexPattern, '', $accountId);
+    }
+
+    return $accountId;
+}
 
 function getFunderAccountCredential($data)
 {

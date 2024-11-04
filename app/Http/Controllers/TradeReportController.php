@@ -10,6 +10,51 @@ use Illuminate\Support\Facades\Validator;
 
 class TradeReportController extends Controller
 {
+    public function reportCloseTrade(Request $request)
+    {
+        $dataRaw = $request->get('data');
+        $dataArr = explode('|', $dataRaw);
+        $dataFormatted = [];
+
+        foreach ($dataArr as $item) {
+            $subData = explode(':', $item);
+            $dataFormatted[$subData[0]] = $subData[1];
+        }
+
+        return response()->json(['apiData' => $dataFormatted]);
+    }
+
+    public function getOngoingTrades($unitId)
+    {
+        $items = TradeReport::with(['tradingAccountCredential.funder', 'tradingAccountCredential.userAccount.tradingUnit'])
+            ->where('account_id', auth()->user()->account_id)
+            ->where('status', 'trading')
+            ->whereHas('tradingAccountCredential.userAccount.tradingUnit', function($query) use ($unitId) {
+                $query->where('unit_id', $unitId);
+            })
+            ->get()
+            ->map(function ($item) {
+                // Assuming the funder_account_id is present in tradingAccountCredential relation
+                $funderAccountId = $item->tradingAccountCredential->funder_account_id;
+//
+//                // Add formatted funder_account_id to each item
+//                $item->tradingAccountCredential->funder_account_id = [
+//                    'long' => $funderAccountId,
+//                    'short' => getFunderAccountShortName($funderAccountId)
+//                ];
+
+                $item->tradingAccountCredential->funder_account_id_short = getFunderAccountShortName($funderAccountId);
+
+                return $item;
+            });
+
+        if ($items->isEmpty()) {
+            return response()->json([]);
+        }
+
+        return response()->json($items);
+    }
+
     public function getReports(Request $request)
     {
         $data = $request->all();
