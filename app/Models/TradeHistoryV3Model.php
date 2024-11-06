@@ -5,11 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class TradeHistoryV2Model extends Model
+class TradeHistoryV3Model extends Model
 {
     use HasFactory;
 
-    protected $table = 'trade_history2';
+    protected $table = 'trade_history3';
 
     protected $fillable = [
         'trade_account_credential_id',

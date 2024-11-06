@@ -24,6 +24,7 @@ use App\Models\AccountsPairingJob;
 use App\Models\FundersMetadata;
 use App\Models\SubAccountsModel;
 use App\Models\TradeHistoryV2Model;
+use App\Models\TradeHistoryV3Model;
 use App\Models\TradeReport;
 use App\Models\TradingUnitQueueModel;
 use App\Models\User;
@@ -325,55 +326,166 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
     Route::post('dev', function(Request $request)
     {
-//        $unitId = '';
+
+
+//        $allRecord = TradeHistoryV2Model::all()->toArray();
+//        $groupedItems = [];
+//
+//        foreach ($allRecord as $item) {
+//            $id = $item['trade_account_credential_id'];
+//            unset($item['trade_account_credential_id']);
+//            $groupedItems[$id][] = $item;
+//        }
+//
+//        $formattedData = [];
+//
+//        foreach ($groupedItems as $trade_account_credential_id => $records) {
+//
+//            $highest_latest_equity = max(array_column($records, 'latest_equity'));
+//
+//            $result = [];
+//            foreach ($records as $record) {
+//                $date = substr($record['created_at'], 0, 10); // Extract the date part
+//                if (!isset($result[$date])) {
+//                    $result[$date] = $record;
+//                } else {
+//                    // Check if this record's created_at is more recent
+//                    if ($record['created_at'] > $result[$date]['created_at']) {
+//                        $result[$date] = $record;
+//                    }
+//                }
+//
+//                $result[$date]['trade_account_credential_id'] = $trade_account_credential_id;
+//            }
 //
 //
-//        $items = TradeReport::with(['tradingAccountCredential.funder', 'tradingAccountCredential.userAccount.tradingUnit'])
-//            ->where('account_id', auth()->user()->account_id)
-//            ->where('status', 'trading')
-//            ->whereHas('tradingAccountCredential.userAccount.tradingUnit', function($query) use ($unitId) {
-//                $query->where('unit_id', $unitId);
-//            })
-//            ->get()
-//            ->map(function ($item) {
-//                // Assuming the funder_account_id is present in tradingAccountCredential relation
-//                $funderAccountId = $item->tradingAccountCredential->funder_account_id;
-////
-////                // Add formatted funder_account_id to each item
-////                $item->tradingAccountCredential->funder_account_id = [
-////                    'long' => $funderAccountId,
-////                    'short' => getFunderAccountShortName($funderAccountId)
-////                ];
+//            foreach ($result as $date => $record) {
 //
-//                $item->tradingAccountCredential->funder_account_id_short = getFunderAccountShortName($funderAccountId);
+//                $date = \Carbon\Carbon::parse($record['created_at'])->format('Y-m-d H:i:s');
 //
-//                return $item;
+//                $formattedData[] = [
+//                    'trade_account_credential_id' => $record['trade_account_credential_id'],
+//                    'starting_daily_equity' => $record['starting_daily_equity'],
+//                    'latest_equity' => $record['latest_equity'],
+//                    'highest_balance' => $highest_latest_equity,
+//                    'created_at' => $date,
+//                    'updated_at' => $date
+//                ];
+//
+//            }
+//        }
+//
+//
+//        $chunks = array_chunk($formattedData, 50);
+//
+//        foreach ($chunks as $chunk) {
+//            DB::transaction(function () use ($chunk) {
+//                DB::table('trade_history3')->insert($chunk);
 //            });
+//        }
 //
-//        !d($items);
 //
+//        !d($chunks);
+////        !d($groupedItems);
+//
+//        die();
 
-        $id = 9;
 
-        $unitItem = TradeReport::with('funder', 'tradingAccountCredential.userAccount.funderAccountCredential', 'tradingAccountCredential.funder')
-            ->where('id', $id)
+
+
+        $tradeAccount = TradeReport::with('tradingAccountCredential', 'tradingAccountCredential.historyV3')
             ->where('account_id', auth()->user()->account_id)
-            ->first();
+            ->where('id', $request->get('id'))
+            ->first()->toArray();
 
 
-        UnitsEvent::dispatch(getUnitAuthId(), [
-            'account_id' => $unitItem->tradingAccountCredential->funder_account_id,
-            'account_id_short' => getFunderAccountShortName($unitItem->tradingAccountCredential->funder_account_id),
-            'itemId' => $unitItem->id,
-            'funder' => [
-                'alias' => $unitItem->tradingAccountCredential->funder->alias,
-                'theme' => $unitItem->tradingAccountCredential->funder->theme
-            ]
-        ], 'initiate-trade', 'NoMachine!', '637EF8F7');
-
-
-        !d($unitItem);
+        !d($tradeAccount['trading_account_credential']['history_v3']);
         die();
+//
+//        $currentPhase = str_replace('phase-', '', $tradeAccount['trading_account_credential']['current_phase']);
+//        $highestBalArr = [];
+//
+//        $startingBal = (float) $tradeAccount['trading_account_credential']['starting_balance'];
+//        $latestEqty = (float) $tradeAccount['latest_equity'];
+//        $maxDrawdown = (float) $tradeAccount['trading_account_credential']['phase_'. $currentPhase .'_max_drawdown'];
+//
+//        if ($tradeAccount['trading_account_credential']['drawdown_type'] === 'trailing_endofday') {
+//            if (!empty($tradeAccount['trading_account_credential']['history_v3'])) {
+//                foreach ($tradeAccount['trading_account_credential']['history_v3'] as $tradeItem) {
+//                    $highestBalArr[] = (float) $tradeItem['highest_balance'];
+//                }
+//            }
+//
+//            $highestBal = (!empty($highestBalArr))? max($highestBalArr) : $latestEqty;
+//            $bufferZone = $startingBal + $maxDrawdown;
+//
+//            if ($highestBal >= $bufferZone) {
+//                return $latestEqty - $startingBal;
+//            }
+//
+//            if ($highestBal <= $startingBal) {
+//                $maxThreshold = $startingBal - $maxDrawdown;
+//            } else {
+//                $maxThreshold = $highestBal - $maxDrawdown;
+//            }
+//
+//            return $latestEqty - $maxThreshold;
+//        }
+//
+//        if ($tradeAccount['trading_account_credential']['drawdown_type'] === 'static') {
+//            $maxTreshold = $startingBal - $maxDrawdown;
+//            return $latestEqty - $maxTreshold;
+//        }
+//
+//        return 'N/A';
+
+//!d($tradeAccount);
+die();
+
+//        $allRecord = TradeHistoryV2Model::where('trade_account_credential_id', $tradeAccount->trade_account_credential_id)
+//            ->get();
+//
+//        $equities = [];
+//
+//        foreach ($allRecord as $item) {
+//            $equities[] = $item->latest_equity;
+//        }
+//
+//        $currentPhase   = str_replace('phase-', '', $tradeAccount->tradingAccountCredential->current_phase);
+//        $maxDdStr       = 'phase_'. $currentPhase .'_max_drawdown';
+//        $maxDrawdown    = (float) $tradeAccount->tradingAccountCredential->$maxDdStr;
+//        $highestEquity  = max($equities);
+//        $maxThreshold   = (float) $highestEquity - $maxDrawdown;
+//        $Rdd = (float) $tradeAccount->latest_equity - $maxThreshold;
+
+
+
+        !d($maxThreshold);
+        !d($Rdd);
+
+
+        die();
+
+
+
+//        $tradeAccount = TradeReport::with('tradingAccountCredential')
+//            ->where('account_id', auth()->user()->account_id)
+//            ->where('id', 41)
+//            ->first();
+//
+//        $startOfDay = Carbon::today()->addHours(4);
+//
+//        $todaysRecord = TradeHistoryV2Model::where('trade_account_credential_id', $tradeAccount->tradingAccountCredential->id)
+//            ->where('created_at', '>=', $startOfDay)
+//            ->get();
+//
+//        $prevDayRecord = TradeHistoryV2Model::where('trade_account_credential_id', $tradeAccount->tradingAccountCredential->id)
+//            ->where('created_at', '<', $startOfDay)
+//            ->get();
+//
+//        !d($prevDayRecord);
+        die();
+
 
 
 //            UnitResponse::dispatch(auth()->user()->account_id, [], 'trade-closed');

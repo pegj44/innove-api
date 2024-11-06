@@ -62,7 +62,7 @@ class TradeReportController extends Controller
             'tradingAccountCredential.userAccount.tradingUnit',
             'tradingAccountCredential.funder.metadata',
             'tradingAccountCredential.userAccount.funderAccountCredential',
-            'tradingAccountCredential.historyV2'
+            'tradingAccountCredential.historyV3'
         )
             ->where('account_id', auth()->user()->account_id)
             ->whereHas('tradingAccountCredential', function($query) {

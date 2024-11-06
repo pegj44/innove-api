@@ -7,6 +7,7 @@ use App\Events\UnitsEvent;
 use App\Models\PairedItems;
 use App\Models\TradeHistoryModel;
 use App\Models\TradeHistoryV2Model;
+use App\Models\TradeHistoryV3Model;
 use App\Models\TradeReport;
 use App\Models\TradingIndividual;
 use App\Models\TradingUnitQueueModel;
@@ -42,7 +43,13 @@ class TradeController extends Controller
             $pairUnitId = getQueueUnitId($UnitMatch->unit, $dataFormatted['pairUnit'], false, 'id');
             $unitId = getQueueUnitId($UnitMatch->unit, $dataFormatted['selfUnit'], false, 'id');
 
-            $this->updateLatestEquity($unitId, $dataFormatted['latestEquity']);
+            $tradeAccount = TradeReport::with('tradingAccountCredential', 'tradingAccountCredential.historyV3')
+                ->where('account_id', auth()->user()->account_id)
+                ->where('id', $unitId)
+                ->first();
+
+            $this->updateLatestEquity($tradeAccount, $dataFormatted['latestEquity']);
+            $this->recordTradeHistory($tradeAccount, $dataFormatted['latestEquity']);
 
             $pairAccount = TradeReport::with('tradingAccountCredential')
                 ->where('account_id', auth()->user()->account_id)
@@ -70,13 +77,38 @@ class TradeController extends Controller
         return response()->json(0);
     }
 
-    private function recordTradeHistory($tradeAccountId, $startingDailyEquity, $latestEquity)
+    private function recordTradeHistory($tradeAccount, $latestEquity)
     {
-        $item = new TradeHistoryV2Model();
-        $item->trade_account_credential_id = $tradeAccountId;
-        $item->starting_daily_equity = (float) $startingDailyEquity;
-        $item->latest_equity = (float) $latestEquity;
-        $item->save();
+        $latestEquity = (float) $latestEquity;
+        $tradeHistory = TradeHistoryV3Model::where('trade_account_credential_id', $tradeAccount->trade_account_credential_id)
+            ->latest('created_at')
+            ->first();
+
+        if (empty($tradeHistory)) {
+            $item = new TradeHistoryV3Model();
+            $item->trade_account_credential_id = $tradeAccount->trade_account_credential_id;
+            $item->starting_daily_equity = (float) $tradeAccount->starting_daily_equity;
+            $item->latest_equity = $latestEquity;
+            $item->highest_balance = $latestEquity;
+            $item->save();
+        } else {
+
+            $isToday = Carbon::parse($tradeHistory->created_at)->isToday();
+            $highestBalance = ($latestEquity > $tradeHistory->highest_balance)? $latestEquity : $tradeHistory->highest_balance;
+
+            if ($isToday) {
+                $tradeHistory->latest_equity = $latestEquity;
+                $tradeHistory->highest_balance = $highestBalance;
+                $tradeHistory->update();
+            } else {
+                $item = new TradeHistoryV3Model();
+                $item->trade_account_credential_id = $tradeAccount->trade_account_credential_id;
+                $item->starting_daily_equity = (float) $tradeAccount->starting_daily_equity;
+                $item->latest_equity = $latestEquity;
+                $item->highest_balance = $highestBalance;
+                $item->save();
+            }
+        }
 
         return response()->json(1);
     }
@@ -95,8 +127,8 @@ class TradeController extends Controller
             $trade->delete();
             $UnitMatch->delete();
 
-            $this->recordTradeHistory($item1->trade_account_credential_id, $item1->starting_daily_equity, $item1->latest_equity);
-            $this->recordTradeHistory($item2->trade_account_credential_id, $item2->starting_daily_equity, $item2->latest_equity);
+//            $this->recordTradeHistory($item1->trade_account_credential_id, $item1->starting_daily_equity, $item1->latest_equity);
+//            $this->recordTradeHistory($item2->trade_account_credential_id, $item2->starting_daily_equity, $item2->latest_equity);
 
             UnitResponse::dispatch(auth()->user()->account_id, [], 'trade-closed');
         }
@@ -104,13 +136,8 @@ class TradeController extends Controller
         return false;
     }
 
-    private function updateLatestEquity($unitId, $latestEquity)
+    private function updateLatestEquity($tradeAccount, $latestEquity)
     {
-        $tradeAccount = TradeReport::with('tradingAccountCredential')
-            ->where('account_id', auth()->user()->account_id)
-            ->where('id', $unitId)
-            ->first();
-
         if ($tradeAccount->status !== 'trading') {
             return false;
         }
@@ -123,30 +150,41 @@ class TradeController extends Controller
         return true;
     }
 
-    public function getCalculatedRdd($data)
+    public function getCalculatedRdd($tradeAccount)
     {
-        $currentPhase = str_replace('phase-', '', $data['trading_account_credential']['current_phase']);
+        $currentPhase = str_replace('phase-', '', $tradeAccount['trading_account_credential']['current_phase']);
+        $highestBalArr = [];
 
-        if ($data['trading_account_credential']['drawdown_type'] === 'trailing_endofday') {
-            $highestBal = [$data['trading_account_credential']['starting_balance']];
+        $startingBal = (float) $tradeAccount['trading_account_credential']['starting_balance'];
+        $latestEqty = (float) $tradeAccount['latest_equity'];
+        $maxDrawdown = (float) $tradeAccount['trading_account_credential']['phase_'. $currentPhase .'_max_drawdown'];
 
-            if (!empty($data['trading_account_credential']['history_v2'])) {
-                foreach ($data['trading_account_credential']['history_v2'] as $tradeItem) {
-                    $highestBal[] = (float) $tradeItem['latest_equity'];
+        if ($tradeAccount['trading_account_credential']['drawdown_type'] === 'trailing_endofday') {
+            if (!empty($tradeAccount['trading_account_credential']['history_v3'])) {
+                foreach ($tradeAccount['trading_account_credential']['history_v3'] as $tradeItem) {
+                    $highestBalArr[] = (float) $tradeItem['highest_balance'];
                 }
             }
 
-            $highestBal = max($highestBal);
-            $maxTreshold = (float) $highestBal - (float) $data['trading_account_credential']['phase_'. $currentPhase .'_max_drawdown'];
+            $highestBal = (!empty($highestBalArr))? max($highestBalArr) : $latestEqty;
+            $bufferZone = $startingBal + $maxDrawdown;
 
-            return ($highestBal >= $data['latest_equity'])? (float) $data['latest_equity'] - $maxTreshold : $data['trading_account_credential']['phase_'. $currentPhase .'_max_drawdown'];
+            if ($highestBal >= $bufferZone) {
+                return $latestEqty - $startingBal;
+            }
+
+            if ($highestBal <= $startingBal) {
+                $maxThreshold = $startingBal - $maxDrawdown;
+            } else {
+                $maxThreshold = $highestBal - $maxDrawdown;
+            }
+
+            return $latestEqty - $maxThreshold;
         }
 
-        if ($data['trading_account_credential']['drawdown_type'] === 'static') {
-            $latestEquity = (float) $data['latest_equity'];
-            $maxTreshold = (float) $data['trading_account_credential']['starting_balance'] - (float) $data['trading_account_credential']['phase_'. $currentPhase .'_max_drawdown'];
-
-            return $latestEquity - $maxTreshold;
+        if ($tradeAccount['trading_account_credential']['drawdown_type'] === 'static') {
+            $maxTreshold = $startingBal - $maxDrawdown;
+            return $latestEqty - $maxTreshold;
         }
 
         return null;
