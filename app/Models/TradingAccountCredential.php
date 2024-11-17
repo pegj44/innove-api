@@ -36,6 +36,7 @@ class TradingAccountCredential extends Model
         'platform_login_username',
         'platform_login_password',
         'drawdown_type',
+        'priority'
     ];
 
     public $attributes = [
@@ -56,6 +57,7 @@ class TradingAccountCredential extends Model
         'platform_login_username' => '',
         'platform_login_password' => '',
         'drawdown_type' => '',
+        'priority' => ''
     ];
 
     public function account()
@@ -91,5 +93,10 @@ class TradingAccountCredential extends Model
     public function historyV3()
     {
         return $this->hasMany(TradeHistoryV3Model::class, 'trade_account_credential_id');
+    }
+
+    public function payouts()
+    {
+        return $this->hasMany(PayoutModel::class, 'trade_account_credential_id');
     }
 }

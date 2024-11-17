@@ -36,4 +36,9 @@ class AccountModel extends Model
     {
         return $this->hasMany(Funder::class, 'account_id');
     }
+
+    public function tradeQueues()
+    {
+        return $this->hasMany(TradeQueueModel::class, 'account_id');
+    }
 }

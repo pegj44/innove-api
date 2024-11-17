@@ -32,19 +32,27 @@ class UserProfileController extends Controller
         $profile = new UserProfileModel();
         $profile->user_id = ($request->get('user_id'))? $request->get('user_id') : auth()->id();
 
-        $image = $request->file('profile_image');
-        $imageName = auth()->id() .'-'. auth()->user()->account_id .'.'. $image->getClientOriginalExtension();
-
-        $profile->fill($request->only([
+        $data = collect($request->only([
             'first_name',
             'middle_name',
             'last_name',
             'company',
             'address',
             'country'
-        ]));
+        ]))->filter(function ($value) {
+            return !is_null($value);
+        })->toArray();
 
-        $profile->profile_image = $imageName;
+        $profile->fill($data);
+
+        $imageName = '';
+
+        if ($request->hasFile('profile_image')) {
+            $image = $request->file('profile_image');
+            $imageName = $profile->user_id .'.'. $image->getClientOriginalExtension();
+            $profile->profile_image = $imageName;
+        }
+
         $create = $profile->save();
 
         if ($create && $request->hasFile('profile_image')) {

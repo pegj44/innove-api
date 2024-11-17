@@ -7,6 +7,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Models\MachineJobs;
 use App\Models\TradingUnitsModel;
 use App\Models\User;
+use App\Models\UserProfileModel;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
@@ -84,6 +85,7 @@ class AuthenticatedSessionController extends Controller
             }
 
             $token = $user->createToken($tokenName, [$apiAbility])->plainTextToken;
+            $profile = UserProfileModel::where('user_id', $user->id)->first();
 
             return response()->json([
                 'token' => $token,
@@ -92,7 +94,8 @@ class AuthenticatedSessionController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'permissions' => auth()->user()->getAllPermissions()->pluck('name')->toArray(),
-                'isOwner' => auth()->user()->is_owner
+                'isOwner' => auth()->user()->is_owner,
+                'profile' => $profile
             ]);
         }
 

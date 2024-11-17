@@ -6,6 +6,7 @@ function getFunderAccountShortName($accountId)
         'FTT-RALLY-',
         'Zero\d+k-s',
         'LV-Zero\d+k-s',
+        'LV-\d+k-s'
     ];
 
     foreach ($toRemove as $pattern) {
@@ -13,12 +14,12 @@ function getFunderAccountShortName($accountId)
         $accountId = preg_replace($regexPattern, '', $accountId);
     }
 
-    return $accountId;
+    return (strlen($accountId) > 7)? substr($accountId, 0, 7) .'...' : $accountId;
 }
 
 function getFunderAccountCredential($data)
 {
-    $data = $data->toArray();
+    $data = (is_array($data))? $data : $data->toArray();
     $funderId = $data['trading_account_credential']['funder_id'];
 
     foreach ($data['trading_account_credential']['user_account']['funder_account_credential'] as $item) {

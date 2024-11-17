@@ -130,6 +130,8 @@ Route::middleware(['auth:sanctum', 'ability:admin,investor'])->group(function()
 });
 Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 {
+    Route::post('dev/audit-account', [\App\Http\Controllers\DevController::class, 'auditAccount']);
+
     Route::controller(\App\Http\Controllers\PayoutController::class)->prefix('trade/')->group(function()
     {
         Route::post('payout', 'store');
@@ -150,6 +152,7 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 
     Route::controller(TradePairAccountsController::class)->prefix('trade/')->group(function()
     {
+        Route::get('queue', 'getQueuedItems');
 //        Route::post('/starting-equity/update', 'updateStartingEquity');
 //        Route::post('/starting-equity/update/status', 'updateStartingEquityJobStatus');
         Route::post('/pair-accounts', 'pairAccounts');
@@ -239,8 +242,14 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
     Route::controller(TradeController::class)->group(function()
     {
         Route::post('trade/initiate', 'initiateTrade');
+        Route::post('trade/initiate-v2', 'initiateTradeV2');
+        Route::post('trade/re-initialize', 'reInitializeTrade');
         Route::post('trade/unit-ready', 'unitReady');
         Route::post('trade/position/close', 'closePosition');
+        Route::post('trade/pair-units', 'pairUnits');
+
+        Route::post('trade/error', 'tradeErrorReport');
+        Route::post('trade/start', 'startTrade');
     });
 
     Route::controller(CalculationsController::class)->prefix('calculate')->group(function()
@@ -272,6 +281,7 @@ Route::middleware(['auth:sanctum', 'ability:admin,investor'])->group(function()
 {
     Route::get('trade/history/weekly', [\App\Http\Controllers\TradeHistoryController::class, 'getWeeklyTrades']);
     Route::get('trade/history', [\App\Http\Controllers\TradeHistoryController::class, 'getAllTrades']);
+    Route::get('trade/history-new', [\App\Http\Controllers\TradeHistoryController::class, 'getAllTrades_new']);
     Route::get('trade/payouts', [\App\Http\Controllers\PayoutController::class, 'getPayouts']);
     Route::get('trade/payout/{id}', [\App\Http\Controllers\PayoutController::class, 'getPayout']);
 });
@@ -328,78 +338,14 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
     {
 
 
-//        $allRecord = TradeHistoryV2Model::all()->toArray();
-//        $groupedItems = [];
-//
-//        foreach ($allRecord as $item) {
-//            $id = $item['trade_account_credential_id'];
-//            unset($item['trade_account_credential_id']);
-//            $groupedItems[$id][] = $item;
-//        }
-//
-//        $formattedData = [];
-//
-//        foreach ($groupedItems as $trade_account_credential_id => $records) {
-//
-//            $highest_latest_equity = max(array_column($records, 'latest_equity'));
-//
-//            $result = [];
-//            foreach ($records as $record) {
-//                $date = substr($record['created_at'], 0, 10); // Extract the date part
-//                if (!isset($result[$date])) {
-//                    $result[$date] = $record;
-//                } else {
-//                    // Check if this record's created_at is more recent
-//                    if ($record['created_at'] > $result[$date]['created_at']) {
-//                        $result[$date] = $record;
-//                    }
-//                }
-//
-//                $result[$date]['trade_account_credential_id'] = $trade_account_credential_id;
-//            }
-//
-//
-//            foreach ($result as $date => $record) {
-//
-//                $date = \Carbon\Carbon::parse($record['created_at'])->format('Y-m-d H:i:s');
-//
-//                $formattedData[] = [
-//                    'trade_account_credential_id' => $record['trade_account_credential_id'],
-//                    'starting_daily_equity' => $record['starting_daily_equity'],
-//                    'latest_equity' => $record['latest_equity'],
-//                    'highest_balance' => $highest_latest_equity,
-//                    'created_at' => $date,
-//                    'updated_at' => $date
-//                ];
-//
-//            }
-//        }
-//
-//
-//        $chunks = array_chunk($formattedData, 50);
-//
-//        foreach ($chunks as $chunk) {
-//            DB::transaction(function () use ($chunk) {
-//                DB::table('trade_history3')->insert($chunk);
-//            });
-//        }
-//
-//
-//        !d($chunks);
-////        !d($groupedItems);
-//
-//        die();
+//        $item = new TradeHistoryV3Model();
+//        $item->trade_account_credential_id = 11;
+//        $item->starting_daily_equity = 30317.00;
+//        $item->latest_equity = 30590;
+//        $item->status = 'phase-3';
+//        $item->highest_balance = 30590;
+//        $item->save();
 
-
-
-
-        $tradeAccount = TradeReport::with('tradingAccountCredential', 'tradingAccountCredential.historyV3')
-            ->where('account_id', auth()->user()->account_id)
-            ->where('id', $request->get('id'))
-            ->first()->toArray();
-
-
-        !d($tradeAccount['trading_account_credential']['history_v3']);
         die();
 //
 //        $currentPhase = str_replace('phase-', '', $tradeAccount['trading_account_credential']['current_phase']);

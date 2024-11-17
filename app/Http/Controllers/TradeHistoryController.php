@@ -92,6 +92,53 @@ class TradeHistoryController extends Controller
         return response()->json(['message' => __('Successfully added trade history.')]);
     }
 
+    public function getAllTrades_new(Request $request)
+    {
+        $data = $request->all();
+        $phase = ($request->get('current_phase')) ? $data['current_phase'] : null;
+
+        $items = TradeReport::with(['tradingAccountCredential.historyV3', 'tradingAccountCredential.funder'])
+            ->where('status', '<>', 'breached')
+            ->where('account_id', auth()->user()->account_id);
+
+        if ($phase) {
+            $items->whereHas('tradingAccountCredential', function($query) use ($phase) {
+                $query->where('current_phase', $phase);
+            });
+        }
+
+        if ($request->get('range')) {
+            if ($data['range'] === 'currentMonth') {
+                $currentMonth = Carbon::now()->month;
+                $items->whereHas('tradingAccountCredential.historyV3', function($query) use ($currentMonth) {
+                    $query->whereMonth('created_at', $currentMonth);
+                });
+            }
+        }
+
+        $orderBy = ($request->get('orderBy'))? $data['orderBy'] : 'created_at';
+        $order = ($request->get('order'))? $data['order'] : 'desc';
+
+        $items->orderBy($orderBy, $order);
+
+
+//        $startOfMonth = Carbon::now('Asia/Manila')->startOfMonth()->setTimezone('UTC');
+//        $endOfMonth = Carbon::now('Asia/Manila')->endOfMonth()->setTimezone('UTC');
+//
+//        $items = TradeReport::with(['tradingAccountCredential' => function ($query) use ($startOfMonth, $endOfMonth) {
+//            $query->with(['historyV3' => function ($query) use ($startOfMonth, $endOfMonth) {
+//                // Load only the historyV3 records created within the current month
+//                $query->whereBetween('created_at', [$startOfMonth, $endOfMonth]);
+//            }]);
+//        }])
+//            ->whereHas('tradingAccountCredential.historyV3', function ($query) use ($startOfMonth, $endOfMonth) {
+//                // Ensure TradeReport items are included only if they have historyV3 records within the date range
+//                $query->whereBetween('created_at', [$startOfMonth, $endOfMonth]);
+//            });
+
+        return response()->json($items->get()->toArray());
+    }
+
     public function getAllTrades(Request $request)
     {
         $data = $request->all();

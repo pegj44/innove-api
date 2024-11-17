@@ -7,12 +7,17 @@ use App\Events\UnitsEvent;
 use App\Models\AccountsPairingJob;
 use App\Models\FundersMetadata;
 use App\Models\PairedItems;
+use App\Models\TradeQueueModel;
 use App\Models\TradeReport;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class TradePairAccountsController extends Controller
 {
+    public static $futuresTpPips = 49;
+    public static $futuresSlPips = 51;
+    public static $forexTpPips = 4.9;
+    public static $forexSlPips = 5.1;
     public static $takeProfitTicks = 49;
     public static $stopLossTicks = 51;
     public static $breachAllowanceAmount = 50;
@@ -54,23 +59,33 @@ class TradePairAccountsController extends Controller
 
     public function removePair(Request $request, string $id)
     {
-        $item = PairedItems::where('id', $id)->first();
-        $item1 = TradeReport::where('id', $request->get('pair1'))->first();
-        $item2 = TradeReport::where('id', $request->get('pair2'))->first();
+        $queue = TradeQueueModel::where('id', $id)->first();
+        $pairItemIds = maybe_unserialize($queue->data);
+        $pairItemIds = array_keys($pairItemIds);
 
-        if ($request->get('updateStatus')) {
-            $item1->status = 'idle';
-            $item2->status = 'idle';
-            $item->delete();
-        } else {
-            $item->status = 'pairing';
-            $item1->status = 'pairing';
-            $item2->status = 'pairing';
+        foreach ($pairItemIds as $pairItemId) {
+            $item = TradeReport::where('id', $pairItemId)->first();
+            $item->status = 'idle';
             $item->update();
         }
 
-        $item1->update();
-        $item2->update();
+        $queue->delete();
+//        $item1 = TradeReport::where('id', $request->get('pair1'))->first();
+//        $item2 = TradeReport::where('id', $request->get('pair2'))->first();
+//
+//        if ($request->get('updateStatus')) {
+//            $item1->status = 'idle';
+//            $item2->status = 'idle';
+//            $item->delete();
+//        } else {
+//            $item->status = 'pairing';
+//            $item1->status = 'pairing';
+//            $item2->status = 'pairing';
+//            $item->update();
+//        }
+//
+//        $item1->update();
+//        $item2->update();
 
         return response()->json(['id' => $id]);
     }
@@ -251,6 +266,42 @@ class TradePairAccountsController extends Controller
 //        return $distance;
 //    }
 
+    public function getQueuedItems()
+    {
+        $queueItems = TradeQueueModel::where('account_id', auth()->user()->account_id)
+            ->get();
+
+        if (empty($queueItems)) {
+            return response()->json([]);
+        }
+
+        $pairedItems = [];
+        $tradingItems = [];
+
+        foreach ($queueItems as $item) {
+            $itemData = [
+                'queue_db_id' => $item->id,
+                'queue_id' => $item->queue_id,
+                'data' => maybe_unserialize($item->data),
+                'unit_ready' => maybe_unserialize($item->unit_ready),
+                'status' => $item->status
+            ];
+
+            if ($item->status === 'pairing' || $item->status === 'pairing-error') {
+                $pairedItems[] = $itemData;
+            }
+
+            if ($item->status === 'trading') {
+                $tradingItems[] = $itemData;
+            }
+        }
+
+        return response()->json([
+            'pairedItems' => $pairedItems,
+            'tradingItems' => $tradingItems
+        ]);
+    }
+
     public function getPairedItems()
     {
         $pairedItems = PairedItems::with([
@@ -341,6 +392,62 @@ class TradePairAccountsController extends Controller
 
         if ($outputType === 'ticks') {
             return floor($takeProfit / self::$takeProfitTicks);
+        }
+
+        return $takeProfit;
+    }
+
+    public static function getTakeProfitTicks($data)
+    {
+        if ($data['trading_account_credential']['asset_type'] === 'futures') {
+            return self::$futuresTpPips;
+        }
+        if ($data['trading_account_credential']['asset_type'] === 'forex') {
+            return self::$forexTpPips;
+        }
+
+        return 0;
+    }
+
+    public static function getStopLossTicks($data)
+    {
+        if ($data['trading_account_credential']['asset_type'] === 'futures') {
+            return self::$futuresSlPips;
+        }
+        if ($data['trading_account_credential']['asset_type'] === 'forex') {
+            return self::$forexSlPips;
+        }
+
+        return 0;
+    }
+
+    public static function getCalculatedOrderAmountV2($data, $orderType = 'futures', $outputType = 'pips')
+    {
+        $currentPhase = str_replace('phase-', '', $data['trading_account_credential']['current_phase']);
+
+        $consistencyRuleType = 'fixed';
+        $consistencyRule = (float) $data['trading_account_credential']['phase_'. $currentPhase .'_daily_target_profit'];
+        $latestEquity = (float) $data['latest_equity'];
+        $startingEquity = (float) $data['starting_daily_equity'];
+
+        $consistencyAmount = ($consistencyRuleType === 'fixed')? $consistencyRule : ($consistencyRule / 100) * $startingEquity;
+        $idealAmount = $startingEquity + $consistencyAmount;
+        $takeProfit = $consistencyAmount;
+
+        if ($latestEquity > $startingEquity && $latestEquity < $idealAmount) {
+            $takeProfit = $idealAmount - $latestEquity;
+        }
+
+        if ($outputType === 'pips') {
+
+            if ($orderType === 'futures') {
+                return floor(300 / 49);
+            }
+
+            if ($orderType === 'forex') {
+                $takeProfit = floor($takeProfit / 4.9);
+                return $takeProfit / 100;
+            }
         }
 
         return $takeProfit;
