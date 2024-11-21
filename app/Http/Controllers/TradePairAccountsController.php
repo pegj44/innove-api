@@ -277,6 +277,11 @@ class TradePairAccountsController extends Controller
 
         $pairedItems = [];
         $tradingItems = [];
+        $pairStatuses = [
+            'pairing',
+            'pairing-error',
+            'pairing-reinitializing'
+        ];
 
         foreach ($queueItems as $item) {
             $itemData = [
@@ -287,7 +292,7 @@ class TradePairAccountsController extends Controller
                 'status' => $item->status
             ];
 
-            if ($item->status === 'pairing' || $item->status === 'pairing-error') {
+            if (in_array($item->status, $pairStatuses)) {
                 $pairedItems[] = $itemData;
             }
 

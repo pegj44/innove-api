@@ -211,6 +211,7 @@ Route::middleware(['auth:sanctum', 'ability:unit'])->prefix('/unit/')->group(fun
     Route::controller(TradeController::class)->group(function()
     {
         Route::post('/report/close-trade', 'closePosition');
+        Route::post('/close-trade', 'closeTrade');
     });
 });
 
@@ -336,16 +337,28 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
     Route::post('dev', function(Request $request)
     {
-
-
+        $tradeAccountId = 80;
+//
 //        $item = new TradeHistoryV3Model();
-//        $item->trade_account_credential_id = 11;
-//        $item->starting_daily_equity = 30317.00;
-//        $item->latest_equity = 30590;
+//        $item->trade_account_credential_id = $tradeAccountId;
+//        $item->starting_daily_equity = (float) $request->get('starting_daily_equity');
+//        $item->latest_equity = $request->get('latest_equity');
 //        $item->status = 'phase-3';
-//        $item->highest_balance = 30590;
+//        $item->highest_balance = (!empty($request->get('highest_balance')))? $request->get('highest_balance') : $request->get('latest_equity');
+//        $item->created_at = '2024-11-14T05:24:21.000000Z';
+//        $item->updated_at = '2024-11-14T05:24:21.000000Z';
 //        $item->save();
+//
 
+
+        $history = TradeHistoryV3Model::where('trade_account_credential_id', $tradeAccountId)->get();
+        $items = [];
+        foreach ($history as $item) {
+            $item = $item->toArray();
+            $items[$item['created_at']] = (float) $item['latest_equity'] - (float) $item['starting_daily_equity'];
+        }
+
+        !d($items);
         die();
 //
 //        $currentPhase = str_replace('phase-', '', $tradeAccount['trading_account_credential']['current_phase']);
