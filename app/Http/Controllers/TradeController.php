@@ -146,7 +146,7 @@ class TradeController extends Controller
             ->first();
 
         $this->updateLatestEquity($tradeAccount, $dataFormatted['latestEquity']);
-        $this->recordTradeHistory($tradeAccount, $dataFormatted['latestEquity']);
+//        $this->recordTradeHistory($tradeAccount, $dataFormatted['latestEquity']);
 
         $isUnitConnected = PusherController::checkUnitConnection(getUnitAuthId(), $matchPairData['unit_id']);
 
@@ -166,7 +166,12 @@ class TradeController extends Controller
         return response()->json($dataFormatted);
     }
 
-    private function recordTradeHistory($tradeAccount, $latestEquity)
+    private function recordTradeHistory($tradeAccount)
+    {
+
+    }
+
+    private function recordTradeHistory_old($tradeAccount, $latestEquity)
     {
         $latestEquity = (float) $latestEquity;
         $tradeHistory = TradeHistoryV3Model::where('trade_account_credential_id', $tradeAccount->trade_account_credential_id)
@@ -393,6 +398,17 @@ class TradeController extends Controller
 
             $credential = getFunderAccountCredential($item);
 
+            $currentPase = str_replace('phase-', '', $item['trading_account_credential']['current_phase']);
+            $dailyDrawdown = (float) $item['trading_account_credential']['phase_'. $currentPase .'_daily_drawdown'];
+
+            if (empty($dailyDrawdown)) {
+                $dailyDrawdown = (float) $item['trading_account_credential']['starting_balance'] * 0.015; // default daily drawdown
+            }
+
+            if ($pnl < 0) {
+                $dailyDrawdown = $pnl + $dailyDrawdown;
+            }
+
             $data[$item['id']] = [
                 'id' => $item['id'],
                 'funder' => $item['trading_account_credential']['funder']['alias'],
@@ -410,6 +426,8 @@ class TradeController extends Controller
                 'order_amount' => TradePairAccountsController::getCalculatedOrderAmountV2($item, $item['trading_account_credential']['asset_type']),
                 'tp' => TradePairAccountsController::getTakeProfitTicks($item),
                 'sl' => TradePairAccountsController::getStopLossTicks($item),
+                'asset_type' => $item['trading_account_credential']['asset_type'],
+                'max_draw_down' => $dailyDrawdown,
                 'platform_type' => $item['trading_account_credential']['platform_type'],
                 'login_username' => $credential['loginUsername'],
                 'login_password' => $credential['loginPassword']

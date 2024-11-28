@@ -337,28 +337,77 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
     Route::post('dev', function(Request $request)
     {
-        $tradeAccountId = 80;
+//        $tradingHistoryArr = [];
 //
-//        $item = new TradeHistoryV3Model();
-//        $item->trade_account_credential_id = $tradeAccountId;
-//        $item->starting_daily_equity = (float) $request->get('starting_daily_equity');
-//        $item->latest_equity = $request->get('latest_equity');
-//        $item->status = 'phase-3';
-//        $item->highest_balance = (!empty($request->get('highest_balance')))? $request->get('highest_balance') : $request->get('latest_equity');
-//        $item->created_at = '2024-11-14T05:24:21.000000Z';
-//        $item->updated_at = '2024-11-14T05:24:21.000000Z';
-//        $item->save();
+//        $reports = TradeReport::with('tradingAccountCredential.historyV3', 'tradingAccountCredential.funder')
+//            ->whereColumn('starting_daily_equity', '!=', 'latest_equity')
+//            ->where('status', '!=', 'breached')
+//            ->get();
 //
+//        foreach ($reports as $report) {
+//            $startingDailyEquity = $report->starting_daily_equity;
+//            $report->starting_daily_equity = $report->latest_equity;
+//
+//            if ($report->status === 'abstained') {
+//                $report->status = 'idle';
+//            }
+//
+//             $report->save();
+//
+//            $highestbal = (float) $report->tradingAccountCredential->historyV3->max('highest_balance');
+//
+//            $tradingHistoryArr[] = [
+//                'trade_account_credential_id' => $report->trade_account_credential_id,
+//                'starting_daily_equity' => (float) $startingDailyEquity,
+//                'latest_equity' => $report->latest_equity,
+//                'status' => $report->tradingAccountCredential->current_phase,
+//                'highest_balance' => ($report->latest_equity > $highestbal)? $report->latest_equity : $highestbal,
+//                'created_at' => Carbon::now(),
+//                'updated_at' => Carbon::now(),
+//            ];
+//        }
+//
+//        TradeHistoryV3Model::insert($tradingHistoryArr);
+        die();
 
 
-        $history = TradeHistoryV3Model::where('trade_account_credential_id', $tradeAccountId)->get();
-        $items = [];
-        foreach ($history as $item) {
-            $item = $item->toArray();
-            $items[$item['created_at']] = (float) $item['latest_equity'] - (float) $item['starting_daily_equity'];
-        }
+//
+//
+//        TradeReport::with('tradingAccountCredential.historyV3', 'tradingAccountCredential.funder')
+//            ->whereColumn('starting_daily_equity', '!=', 'latest_equity')
+//            ->where('status', '!=', 'breached')
+//            ->chunkById(500, function ($reports) use (&$tradingHistoryArr) {
+//                foreach ($reports as $report) {
+//
+//                    $startingDailyEquity = $report->starting_daily_equity;
+//                    $report->starting_daily_equity = $report->latest_equity;
+//
+//                    if ($report->status === 'abstained') {
+//                        $report->status = 'idle';
+//                    }
+//
+////                    $report->save();
+//
+//                    $highestbal = (float) $report->tradingAccountCredential->historyV3->max('highest_balance');
+//
+//                    $tradingHistoryArr[] = [
+//                        'trade_account_credential_id' => $report->trade_account_credential_id,
+//                        'starting_daily_equity' => (float) $startingDailyEquity,
+//                        'latest_equity' => $report->latest_equity,
+//                        'status' => $report->tradingAccountCredential->current_phase,
+//                        'highest_balance' => ($report->latest_equity > $highestbal)? $report->latest_equity : $highestbal
+//                    ];
+//                }
+//            });
 
-        !d($items);
+        !d($tradingHistoryArr);
+//        echo '<pre>';
+//
+//        var_dump($tradingHistoryArr);
+//
+//        echo '</pre>';
+//        TradeHistoryV3Model::insert($tradingHistoryArr);
+
         die();
 //
 //        $currentPhase = str_replace('phase-', '', $tradeAccount['trading_account_credential']['current_phase']);
