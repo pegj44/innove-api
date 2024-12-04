@@ -279,8 +279,8 @@ class TradePairAccountsController extends Controller
         $tradingItems = [];
         $pairStatuses = [
             'pairing',
-            'pairing-error',
-            'pairing-reinitializing'
+            'error',
+            'reinitializing'
         ];
 
         foreach ($queueItems as $item) {
@@ -289,7 +289,9 @@ class TradePairAccountsController extends Controller
                 'queue_id' => $item->queue_id,
                 'data' => maybe_unserialize($item->data),
                 'unit_ready' => maybe_unserialize($item->unit_ready),
-                'status' => $item->status
+                'status' => $item->status,
+                'errors' => maybe_unserialize($item->errors),
+                'closed_items' => $item->closed_items
             ];
 
             if (in_array($item->status, $pairStatuses)) {

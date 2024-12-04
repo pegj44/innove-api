@@ -12,6 +12,7 @@ use App\Models\TradeQueueModel;
 use App\Models\TradeReport;
 use App\Models\TradingIndividual;
 use App\Models\TradingUnitQueueModel;
+use App\Models\UnitProcessesModel;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -27,46 +28,39 @@ class TradeController extends Controller
     {
         $itemId = $request->get('itemId');
         $tradeQueueId = $request->get('queue_db_id');
-        $isUiPathMissing = str_contains($request->get('error'), "UiPath extension");
+        $errorMessage = str_replace('UiPath', 'Robot', $request->get('error'));
+
+        info(print_r([
+            'tradeErrorReport' => [
+                'itemId' => $itemId,
+                'error' => $request->get('error')
+            ]
+        ], true));
 
         $queueItem = TradeQueueModel::where('account_id', auth()->user()->account_id)
             ->where('id', $tradeQueueId)
             ->first();
 
-        $queueItem->status = 'pairing-reinitializing';
-
-        if ($isUiPathMissing) {
-            $queueItem->status = 'pairing-error';
+        if (empty($queueItem)) {
+            return response()->json(['error' => 'Trade queue does not exists.']);
         }
+
+        $errors = maybe_unserialize($queueItem->errors);
+        $errors = (!empty($errors))? $errors : [];
+
+        $errors[$itemId] = $errorMessage;
+
+        $queueItem->errors = maybe_serialize($errors);
+        $queueItem->status = 'error';
 
         $queueItem->update();
-
-        $queueId = $queueItem->queue_id;
-
-        $queueData = maybe_unserialize($queueItem->data);
-        $item = $queueData[$itemId];
-
-        if ($isUiPathMissing) {
-            UnitResponse::dispatch(auth()->user()->account_id, [
-                'queue_db_id' => $tradeQueueId,
-                'itemId' => $itemId,
-                'message' => __('UiPath extension is missing'),
-                'errorCode' => 'missing_uipath',
-                'sound' => true
-            ], 'trade-initialize-error2');
-
-            return response()->json($queueItem);
-        }
 
         UnitResponse::dispatch(auth()->user()->account_id, [
             'queue_db_id' => $tradeQueueId,
             'itemId' => $itemId,
-            'message' => __('Reinitializing...'),
-            'errorCode' => 'initialize_error',
+            'message' => __('Failed to initialize'),
             'sound' => false
-        ], 'trade-initialize-error2');
-
-        $this->initiateUnitTrade($itemId, $item, $queueId, $tradeQueueId);
+        ], 'trade-initialize-error');
 
         return response()->json($queueItem);
     }
@@ -145,7 +139,7 @@ class TradeController extends Controller
             ->where('id', $dataFormatted['itemId'])
             ->first();
 
-        $this->updateLatestEquity($tradeAccount, $dataFormatted['latestEquity']);
+        $this->updateLatestEquity($tradeAccount, $dataFormatted['latestEquity'], true);
 //        $this->recordTradeHistory($tradeAccount, $dataFormatted['latestEquity']);
 
         $isUnitConnected = PusherController::checkUnitConnection(getUnitAuthId(), $matchPairData['unit_id']);
@@ -218,7 +212,7 @@ class TradeController extends Controller
         return false;
     }
 
-    private function updateLatestEquity($tradeAccount, $latestEquity)
+    private function updateLatestEquity($tradeAccount, $latestEquity, $updateNtrades = false)
     {
         if ($tradeAccount->status !== 'trading') {
             return false;
@@ -227,23 +221,28 @@ class TradeController extends Controller
         $latestEquity = (float) str_replace(' ', '', $latestEquity);
         $tradeAccount->latest_equity = $latestEquity;
         $tradeAccount->status = $this->getStatusByLatestEquity($tradeAccount, $latestEquity);
+
+        if ($updateNtrades) {
+            $tradeAccount->n_trades += 1;
+        }
+
         $tradeAccount->update();
 
         return true;
     }
 
-    public function getCalculatedRdd($tradeAccount)
+    public static function getCalculatedRdd($data)
     {
-        $currentPhase = str_replace('phase-', '', $tradeAccount['trading_account_credential']['current_phase']);
+        $currentPhase = str_replace('phase-', '', $data['trading_account_credential']['current_phase']);
         $highestBalArr = [];
 
-        $startingBal = (float) $tradeAccount['trading_account_credential']['starting_balance'];
-        $latestEqty = (float) $tradeAccount['latest_equity'];
-        $maxDrawdown = (float) $tradeAccount['trading_account_credential']['phase_'. $currentPhase .'_max_drawdown'];
+        $startingBal = (float) $data['trading_account_credential']['starting_balance'];
+        $latestEqty = (float) $data['latest_equity'];
+        $maxDrawdown = (float) $data['trading_account_credential']['phase_'. $currentPhase .'_max_drawdown'];
 
-        if ($tradeAccount['trading_account_credential']['drawdown_type'] === 'trailing_endofday') {
-            if (!empty($tradeAccount['trading_account_credential']['history_v3'])) {
-                foreach ($tradeAccount['trading_account_credential']['history_v3'] as $tradeItem) {
+        if ($data['trading_account_credential']['drawdown_type'] === 'trailing_endofday') {
+            if (!empty($data['trading_account_credential']['history_v3'])) {
+                foreach ($data['trading_account_credential']['history_v3'] as $tradeItem) {
                     $highestBalArr[] = (float) $tradeItem['highest_balance'];
                 }
             }
@@ -264,12 +263,12 @@ class TradeController extends Controller
             return $latestEqty - $maxThreshold;
         }
 
-        if ($tradeAccount['trading_account_credential']['drawdown_type'] === 'static') {
+        if ($data['trading_account_credential']['drawdown_type'] === 'static') {
             $maxTreshold = $startingBal - $maxDrawdown;
             return $latestEqty - $maxTreshold;
         }
 
-        return null;
+        return 'N/A';
     }
 
     private function getStatusByLatestEquity($tradeAccount, $latestEquity)
@@ -288,7 +287,7 @@ class TradeController extends Controller
 //        $totalAsset = $latestEquity - $startingBalance;
         $pnl = $latestEquity - $startingDailyEquity;
 
-        $rdd = $this->getCalculatedRdd($tradeAccount);
+        $rdd = self::getCalculatedRdd($tradeAccount);
 
         info(print_r([
             'getStatusByLatestEquity' => [
@@ -367,6 +366,11 @@ class TradeController extends Controller
         return response()->json(1);
     }
 
+    public function findWaitingProcess()
+    {
+
+    }
+
     public function pairUnits(Request $request)
     {
         $itemIds = $request->all();
@@ -400,6 +404,7 @@ class TradeController extends Controller
 
             $currentPase = str_replace('phase-', '', $item['trading_account_credential']['current_phase']);
             $dailyDrawdown = (float) $item['trading_account_credential']['phase_'. $currentPase .'_daily_drawdown'];
+            $maxDrawDown = (float) $item['trading_account_credential']['phase_'. $currentPase .'_max_drawdown'];
 
             if (empty($dailyDrawdown)) {
                 $dailyDrawdown = (float) $item['trading_account_credential']['starting_balance'] * 0.015; // default daily drawdown
@@ -417,20 +422,22 @@ class TradeController extends Controller
                 'funder_account_id_short' => getFunderAccountShortName($item['trading_account_credential']['funder_account_id']),
                 'unit_name' => $item['trading_account_credential']['user_account']['trading_unit']['name'],
                 'unit_id' => $item['trading_account_credential']['user_account']['trading_unit']['unit_id'],
-                'starting_balance' => $item['trading_account_credential']['starting_balance'],
+                'starting_balance' => (float) $item['trading_account_credential']['starting_balance'],
                 'starting_equity' => $item['starting_daily_equity'],
                 'latest_equity' => $item['latest_equity'],
                 'pnl' => number_format($pnl, 2),
-                'rdd' => round($this->getCalculatedRdd($item), 0),
+                'rdd' => round(self::getCalculatedRdd($item), 0),
                 'symbol' => $item['trading_account_credential']['symbol'],
                 'order_amount' => TradePairAccountsController::getCalculatedOrderAmountV2($item, $item['trading_account_credential']['asset_type']),
                 'tp' => TradePairAccountsController::getTakeProfitTicks($item),
                 'sl' => TradePairAccountsController::getStopLossTicks($item),
                 'asset_type' => $item['trading_account_credential']['asset_type'],
-                'max_draw_down' => $dailyDrawdown,
+                'daily_draw_down' => $dailyDrawdown,
+                'max_draw_down' => $maxDrawDown,
                 'platform_type' => $item['trading_account_credential']['platform_type'],
                 'login_username' => $credential['loginUsername'],
-                'login_password' => $credential['loginPassword']
+                'login_password' => $credential['loginPassword'],
+                'data' => $item
             ];
         }
 
@@ -532,6 +539,46 @@ class TradeController extends Controller
         }
     }
 
+    public function updateUnitProcess($item, $processType)
+    {
+        $process = $this->getUnitProcess($item, $processType);
+
+        if (!empty($process)) {
+            $process->delete();
+        }
+
+        $nextProcess = $this->getUnitProcess($item, $processType, 'waiting');
+    }
+
+    public function getUnitProcess($item, $processType, $status = 'processing')
+    {
+        return UnitProcessesModel::where('account_id', auth()->user()->account_id)
+            ->where('unit_id', $item['unit_id'])
+            ->where('process_type', $processType)
+            ->where('status', $status)
+            ->first();
+    }
+
+    public function recordUnitProcess($item, $processType)
+    {
+        $existingProcess = $this->getUnitProcess($item, $processType);
+
+        $process = new UnitProcessesModel();
+        $process->account_id = auth()->user()->account_id;
+        $process->unit_id = $item['unit_id'];
+        $process->status = 'waiting';
+        $process->process_name = $item['platform_type'];
+        $process->process_type = $processType;
+
+        if (empty($existingProcess)) {
+            $process->status = 'processing';
+        }
+
+        $process->save();
+
+        return $process->status === 'processing';
+    }
+
     public function initiateTradeV2(Request $request)
     {
         $data = $request->get('data');
@@ -565,41 +612,44 @@ class TradeController extends Controller
         }
 
         foreach ($data as $itemId => $item) {
-            $this->initiateUnitTrade($itemId, $item, $queueId, $tradeQueue->id);
+            $isProcessRecorded = $this->recordUnitProcess($item, 'initiate-trade');
+            $this->initiateUnitTrade($itemId, $item, $queueId, $tradeQueue->id, $isProcessRecorded);
         }
 
         return response()->json(['message' => __('Account pairing initiated.')]);
     }
 
-    private function initiateUnitTrade($itemId, $item, $queueId, $tradeQueueId)
+    private function initiateUnitTrade($itemId, $item, $queueId, $tradeQueueId, $initiateTrade = false)
     {
         $pairUnit = TradeReport::where('id', $itemId)->first();
         $pairUnit->status = 'pairing';
         $pairUnit->update();
 
-        UnitsEvent::dispatch(getUnitAuthId(), [
-            'account_id' => $item['funder_account_id_long'],
-            'account_id_short' => $item['funder_account_id_short'],
-            'purchase_type' => $item['purchase_type'],
-            'symbol' => $item['symbol'],
-            'order_amount' => $item['order_amount'],
-            'take_profit_ticks' => $item['tp'],
-            'stop_loss_ticks' => $item['sl'],
-            'queue_id' => $queueId,
-            'queue_db_id' => $tradeQueueId,
-            'itemId' => $itemId,
-            'loginUsername' => $item['login_username'],
-            'loginPassword' => $item['login_password'],
-            'funder' => [
-                'alias' => $item['funder'],
-                'theme' => $item['funder_theme']
-            ],
-            'unit_name' => $item['unit_name'],
-            'starting_balance' => $item['starting_balance'],
-            'starting_equity' => $item['starting_equity'],
-            'latest_equity' => $item['latest_equity'],
-            'rdd' => $item['rdd']
-        ], 'initiate-trade', $item['platform_type'], $item['unit_id']);
+        if ($initiateTrade) {
+            UnitsEvent::dispatch(getUnitAuthId(), [
+                'account_id' => $item['funder_account_id_long'],
+                'account_id_short' => $item['funder_account_id_short'],
+                'purchase_type' => $item['purchase_type'],
+                'symbol' => $item['symbol'],
+                'order_amount' => $item['order_amount'],
+                'take_profit_ticks' => $item['tp'],
+                'stop_loss_ticks' => $item['sl'],
+                'queue_id' => $queueId,
+                'queue_db_id' => $tradeQueueId,
+                'itemId' => $itemId,
+                'loginUsername' => $item['login_username'],
+                'loginPassword' => $item['login_password'],
+                'funder' => [
+                    'alias' => $item['funder'],
+                    'theme' => $item['funder_theme']
+                ],
+                'unit_name' => $item['unit_name'],
+                'starting_balance' => $item['starting_balance'],
+                'starting_equity' => $item['starting_equity'],
+                'latest_equity' => $item['latest_equity'],
+                'rdd' => $item['rdd']
+            ], 'initiate-trade', $item['platform_type'], $item['unit_id']);
+        }
     }
 
     private function generateQueueId()

@@ -19,20 +19,6 @@ class UpdateTradeReportEquity extends Command
 
     public function handle()
     {
-//        TradeReport::whereColumn('starting_daily_equity', '!=', 'latest_equity')
-//            ->chunkById(500, function ($reports)
-//            {
-//                foreach ($reports as $report) {
-//                    $report->starting_daily_equity = $report->latest_equity;
-//
-//                    if ($report->status === 'abstained') {
-//                        $report->status = 'idle';
-//                    }
-//
-//                    $report->save();
-//                }
-//            });
-
         $tradingHistoryArr = [];
 
         $reports = TradeReport::with('tradingAccountCredential.historyV3', 'tradingAccountCredential.funder')
@@ -43,6 +29,7 @@ class UpdateTradeReportEquity extends Command
         foreach ($reports as $report) {
             $startingDailyEquity = $report->starting_daily_equity;
             $report->starting_daily_equity = $report->latest_equity;
+            $report->n_trades = 0;
 
             if ($report->status === 'abstained') {
                 $report->status = 'idle';

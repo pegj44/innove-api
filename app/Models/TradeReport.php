@@ -20,6 +20,7 @@ class TradeReport extends Model
         'take_profit_ticks',
         'status',
         'remarks',
+        'n_trades'
     ];
 
     protected $attributes = [
@@ -28,6 +29,7 @@ class TradeReport extends Model
         'order_amount' => '',
         'stop_loss_ticks' => '',
         'take_profit_ticks' => '',
+        'n_trades' => 0
     ];
 
     public function account()

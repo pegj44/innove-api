@@ -27,6 +27,7 @@ use App\Models\TradeHistoryV2Model;
 use App\Models\TradeHistoryV3Model;
 use App\Models\TradeReport;
 use App\Models\TradingUnitQueueModel;
+use App\Models\UnitProcessesModel;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -160,6 +161,11 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
         Route::post('/update-trade-report-settings', 'updateTradeSettings');
         Route::delete('/paired-items', 'clearPairedItems');
         Route::delete('/pair/{id}/remove', 'removePair');
+    });
+
+    Route::controller(\App\Http\Controllers\MagicPairController::class)->prefix('trade/')->group(function()
+    {
+        Route::post('/magic-pair', 'magicPairAccounts');
     });
 
     Route::controller(TradingUnitsController::class)->group(function()
@@ -337,37 +343,16 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
     Route::post('dev', function(Request $request)
     {
-//        $tradingHistoryArr = [];
-//
-//        $reports = TradeReport::with('tradingAccountCredential.historyV3', 'tradingAccountCredential.funder')
-//            ->whereColumn('starting_daily_equity', '!=', 'latest_equity')
-//            ->where('status', '!=', 'breached')
-//            ->get();
-//
-//        foreach ($reports as $report) {
-//            $startingDailyEquity = $report->starting_daily_equity;
-//            $report->starting_daily_equity = $report->latest_equity;
-//
-//            if ($report->status === 'abstained') {
-//                $report->status = 'idle';
-//            }
-//
-//             $report->save();
-//
-//            $highestbal = (float) $report->tradingAccountCredential->historyV3->max('highest_balance');
-//
-//            $tradingHistoryArr[] = [
-//                'trade_account_credential_id' => $report->trade_account_credential_id,
-//                'starting_daily_equity' => (float) $startingDailyEquity,
-//                'latest_equity' => $report->latest_equity,
-//                'status' => $report->tradingAccountCredential->current_phase,
-//                'highest_balance' => ($report->latest_equity > $highestbal)? $report->latest_equity : $highestbal,
-//                'created_at' => Carbon::now(),
-//                'updated_at' => Carbon::now(),
-//            ];
-//        }
-//
-//        TradeHistoryV3Model::insert($tradingHistoryArr);
+
+//        UnitsEvent::dispatch(getUnitAuthId(), [], 'test-run', 'BackgroundProcess_Test', 'FAAD4DC0');
+
+        $process = UnitProcessesModel::where('account_id', auth()->user()->account_id)
+            ->where('unit_id', 'test')
+            ->where('process_type', 'initiate-trade')
+            ->first();
+
+        !d(!empty($process));
+
         die();
 
 

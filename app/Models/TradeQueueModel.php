@@ -15,13 +15,15 @@ class TradeQueueModel extends Model
         'queue_id',
         'data',
         'status',
-        'unit_ready' => ''
+        'unit_ready',
+        'errors',
     ];
 
     protected $attributes = [
         'data' => '',
         'status' => '',
-        'unit_ready' => ''
+        'unit_ready' => '',
+        'errors' => ''
     ];
 
     public function account()
