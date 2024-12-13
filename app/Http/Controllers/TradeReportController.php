@@ -246,6 +246,10 @@ class TradeReportController extends Controller
                 return response()->json(['errors' => __('Unable to find trade report.')]);
             }
 
+            if ($data['starting_daily_equity'] != $data['latest_equity']) {
+//                TradeController::recordTradeHistory($item, $data['latest_equity']);
+            }
+
             $item->fill($data);
             $update = $item->update();
 

@@ -1,5 +1,17 @@
 <?php
 
+function getRemainingTargetProfit($item)
+{
+    $currentPhase = str_replace('phase-', '', $item['trading_account_credential']['current_phase']);
+    $targetProfit = (float) $item['trading_account_credential']['phase_'. $currentPhase .'_total_target_profit'];
+    $totalPnL = (float) $item['latest_equity'] - (float) $item['trading_account_credential']['starting_balance'];
+    $remainingTP = $targetProfit - $totalPnL;
+    $remainingTP = round($remainingTP, 2);
+
+    return ($remainingTP <= 0 )? 200 : $remainingTP;
+}
+
+
 function getFunderAccountShortName($accountId)
 {
     $toRemove = [

@@ -21,9 +21,8 @@ class UpdateTradeReportEquity extends Command
     {
         $tradingHistoryArr = [];
 
-        $reports = TradeReport::with('tradingAccountCredential.historyV3', 'tradingAccountCredential.funder')
+        $reports = TradeReport::with('tradingAccountCredential.historyV3')
             ->whereColumn('starting_daily_equity', '!=', 'latest_equity')
-            ->where('status', '!=', 'breached')
             ->get();
 
         foreach ($reports as $report) {

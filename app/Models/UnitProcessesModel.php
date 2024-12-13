@@ -15,6 +15,7 @@ class UnitProcessesModel extends Model
         'unit_id',
         'status',
         'process_name',
-        'process_type'
+        'process_type',
+        'queue_id'
     ];
 }

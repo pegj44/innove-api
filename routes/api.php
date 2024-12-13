@@ -25,6 +25,7 @@ use App\Models\FundersMetadata;
 use App\Models\SubAccountsModel;
 use App\Models\TradeHistoryV2Model;
 use App\Models\TradeHistoryV3Model;
+use App\Models\TradeQueueModel;
 use App\Models\TradeReport;
 use App\Models\TradingUnitQueueModel;
 use App\Models\UnitProcessesModel;
@@ -344,15 +345,12 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
     Route::post('dev', function(Request $request)
     {
 
-//        UnitsEvent::dispatch(getUnitAuthId(), [], 'test-run', 'BackgroundProcess_Test', 'FAAD4DC0');
+        $reports = TradeReport::with('tradingAccountCredential.historyV3')
+            ->whereColumn('starting_daily_equity', '!=', 'latest_equity')
+//            ->where('status', '!=', 'breached')
+            ->get();
 
-        $process = UnitProcessesModel::where('account_id', auth()->user()->account_id)
-            ->where('unit_id', 'test')
-            ->where('process_type', 'initiate-trade')
-            ->first();
-
-        !d(!empty($process));
-
+        dd($reports->toArray());
         die();
 
 
