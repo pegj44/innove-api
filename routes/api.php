@@ -108,6 +108,7 @@ Route::middleware(['auth:sanctum', 'ability:admin,investor'])->group(function()
     Route::controller(FunderController::class)->group(function()
     {
         Route::get('funders', 'list');
+        Route::get('funders/packages', 'packages');
     });
 
     Route::controller(TradingIndividualsController::class)->group(function()

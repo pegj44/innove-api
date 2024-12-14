@@ -1,0 +1,19 @@
+{
+    "name": "UProfit Zero Day 100k",
+    "funder_name": "UProfit",
+    "funder_alias": "upft",
+    "phase": 2,
+    "specs": {
+        "asset_type": "futures",
+        "symbol": "/MGCG25",
+        "starting_balance": 100000,
+        "draw_down_type": "trailing_end_of_day",
+        "minimum_trading_days": 5,
+        "maximum_loss_per_trade_percentage": 1.5,
+        "target_profit": 3000,
+        "daily_target_profit": 1500,
+        "max_draw_down": 3000,
+        "daily_draw_down": 1700,
+        "platform": "Tradoverse_1"
+    }
+}
