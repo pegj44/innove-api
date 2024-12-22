@@ -226,7 +226,9 @@ class TradeController extends Controller
     private function closeTradingPositionQueue($item1, $item2, $queueItem)
     {
         if ($item1->status !== 'trading' && $item2->status !== 'trading') {
-            $queueItem->delete();
+            $queueItem->status = 'closed';
+            $queueItem->update();
+
             UnitResponse::dispatch(auth()->user()->account_id, [], 'trade-closed');
         }
 
@@ -465,6 +467,7 @@ class TradeController extends Controller
                 'platform_type' => $item['trading_account_credential']['platform_type'],
                 'login_username' => $credential['loginUsername'],
                 'login_password' => $credential['loginPassword'],
+                'phase' => $item['trading_account_credential']['current_phase'],
                 'data' => $item
             ];
         }

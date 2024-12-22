@@ -335,7 +335,11 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 
 });
 
-
+Route::post('/aw-snap', function(Request $request) {
+    info(print_r([
+        'aw-snap1' => $request->all()
+    ], true));
+})->middleware('guest')->name('aw-snap');
 
 Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 {
@@ -346,12 +350,18 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
     Route::post('dev', function(Request $request)
     {
 
-        $reports = TradeReport::with('tradingAccountCredential.historyV3')
-            ->whereColumn('starting_daily_equity', '!=', 'latest_equity')
-//            ->where('status', '!=', 'breached')
-            ->get();
 
-        dd($reports->toArray());
+//        $tradeAccount = TradeReport::with(['tradingAccountCredential', 'tradingAccountCredential.historyV3'])
+//            ->where('account_id', auth()->user()->account_id)
+//            ->where('id', 151)
+//            ->first();
+//
+//
+//        !d($tradeAccount);
+
+
+
+//        !d(maybe_unserialize('a:2:{i:166;a:18:{s:6:"symbol";s:7:"/MGCG25";s:12:"order_amount";s:1:"5";s:2:"tp";s:2:"50";s:2:"sl";s:2:"53";s:13:"purchase_type";s:3:"buy";s:7:"unit_id";s:8:"88DD7700";s:13:"platform_type";s:12:"Tradoverse_1";s:14:"login_username";s:9:"pfyliquid";s:14:"login_password";s:8:"AQO4uHRA";s:22:"funder_account_id_long";s:14:"Zero50k-s59111";s:23:"funder_account_id_short";s:5:"59111";s:6:"funder";s:4:"UPFT";s:12:"funder_theme";s:15:"#FCBC11|#101217";s:9:"unit_name";s:6:"UNIT 8";s:16:"starting_balance";s:5:"50000";s:15:"starting_equity";s:8:"49264.00";s:13:"latest_equity";s:8:"49264.00";s:3:"rdd";s:4:"1264";}i:164;a:18:{s:6:"symbol";s:7:"/MGCG25";s:12:"order_amount";s:1:"5";s:2:"tp";s:2:"51";s:2:"sl";s:2:"52";s:13:"purchase_type";s:4:"sell";s:7:"unit_id";s:8:"7F337DB4";s:13:"platform_type";s:12:"Tradoverse_1";s:14:"login_username";s:16:"rizalherniecmelu";s:14:"login_password";s:8:"90eExVoQ";s:22:"funder_account_id_long";s:14:"Zero50k-s59099";s:23:"funder_account_id_short";s:5:"59099";s:6:"funder";s:4:"UPFT";s:12:"funder_theme";s:15:"#FCBC11|#101217";s:9:"unit_name";s:6:"UNIT 2";s:16:"starting_balance";s:5:"50000";s:15:"starting_equity";s:8:"50674.00";s:13:"latest_equity";s:8:"49984.00";s:3:"rdd";s:4:"1984";}}'));
         die();
 
 
