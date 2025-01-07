@@ -2,9 +2,9 @@
 
 function getRemainingTargetProfit($item)
 {
-    $currentPhase = str_replace('phase-', '', $item['trading_account_credential']['current_phase']);
-    $targetProfit = (float) $item['trading_account_credential']['phase_'. $currentPhase .'_total_target_profit'];
-    $totalPnL = (float) $item['latest_equity'] - (float) $item['trading_account_credential']['starting_balance'];
+    $package = $item['trading_account_credential']['package'];
+    $targetProfit = $package['total_target_profit'];
+    $totalPnL = (float) $item['latest_equity'] - $package['starting_balance'];
     $remainingTP = $targetProfit - $totalPnL;
     $remainingTP = round($remainingTP, 2);
 
@@ -35,7 +35,7 @@ function getFunderAccountShortName($accountId)
 function getFunderAccountCredential($data)
 {
     $data = (is_array($data))? $data : $data->toArray();
-    $funderId = $data['trading_account_credential']['funder_id'];
+    $funderId = $data['trading_account_credential']['package']['funder']['id'];
 
     foreach ($data['trading_account_credential']['user_account']['funder_account_credential'] as $item) {
         if ($item['funder_id'] === $funderId) {

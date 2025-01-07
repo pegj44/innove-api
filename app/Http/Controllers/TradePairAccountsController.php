@@ -69,7 +69,9 @@ class TradePairAccountsController extends Controller
             $item->update();
         }
 
-        $queue->delete();
+        $queue->status = 'closed';
+        $queue->update();
+
 //        $item1 = TradeReport::where('id', $request->get('pair1'))->first();
 //        $item2 = TradeReport::where('id', $request->get('pair2'))->first();
 //
@@ -404,24 +406,24 @@ class TradePairAccountsController extends Controller
         return $takeProfit;
     }
 
-    public static function getTakeProfitTicks($data)
+    public static function getTakeProfitTicks($assetType)
     {
-        if ($data['trading_account_credential']['asset_type'] === 'futures') {
+        if ($assetType === 'futures') {
             return self::$futuresTpPips;
         }
-        if ($data['trading_account_credential']['asset_type'] === 'forex') {
+        if ($assetType === 'forex') {
             return self::$forexTpPips;
         }
 
         return 0;
     }
 
-    public static function getStopLossTicks($data)
+    public static function getStopLossTicks($assetType)
     {
-        if ($data['trading_account_credential']['asset_type'] === 'futures') {
+        if ($assetType === 'futures') {
             return self::$futuresSlPips;
         }
-        if ($data['trading_account_credential']['asset_type'] === 'forex') {
+        if ($assetType === 'forex') {
             return self::$forexSlPips;
         }
 
@@ -430,10 +432,8 @@ class TradePairAccountsController extends Controller
 
     public static function getCalculatedOrderAmountV2($data, $orderType = 'futures', $outputType = 'pips')
     {
-        $currentPhase = str_replace('phase-', '', $data['trading_account_credential']['current_phase']);
-
         $consistencyRuleType = 'fixed';
-        $consistencyRule = (float) $data['trading_account_credential']['phase_'. $currentPhase .'_daily_target_profit'];
+        $consistencyRule = $data['trading_account_credential']['package']['daily_target_profit'];
         $latestEquity = (float) $data['latest_equity'];
         $startingEquity = (float) $data['starting_daily_equity'];
 

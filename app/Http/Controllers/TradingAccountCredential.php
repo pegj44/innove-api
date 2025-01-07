@@ -14,7 +14,7 @@ class TradingAccountCredential extends Controller
      */
     public function getCredentials()
     {
-        $credentials = TradingAccountCredentialModel::with(['funder.metadata', 'userAccount.tradingUnit', 'tradeReports'])
+        $credentials = TradingAccountCredentialModel::with(['package', 'package.funder', 'userAccount.tradingUnit', 'tradeReports'])
             ->where('account_id', auth()->user()->account_id)
             ->get();
 
@@ -36,11 +36,11 @@ class TradingAccountCredential extends Controller
     {
         try {
             $data = array_filter($request->except('_token'));
-            $validator = $this->validateUserInput($data);
-
-            if ($validator->fails()) {
-                return response()->json(['errors' => $validator->errors()], 422);
-            }
+//            $validator = $this->validateUserInput($data);
+//
+//            if ($validator->fails()) {
+//                return response()->json(['errors' => $validator->errors()], 422);
+//            }
 
             $data['account_id'] = auth()->user()->account_id;
 
@@ -50,11 +50,17 @@ class TradingAccountCredential extends Controller
                 return response()->json(['errors' => __('Failed to create the credential.')]);
             }
 
+            $tradeAccount = TradingAccountCredentialModel::with(['package', 'package.funder'])
+                ->where('id', $credential->id)
+                ->first();
+
+            $tradeAccount = $tradeAccount->toArray();
+
             $tradeReport = new TradeReport();
             $tradeReport->account_id = auth()->user()->account_id;
             $tradeReport->trade_account_credential_id = $credential->id;
-            $tradeReport->starting_daily_equity = $request->get('starting_balance');
-            $tradeReport->latest_equity = $request->get('starting_balance');
+            $tradeReport->starting_daily_equity = (float) $tradeAccount['package']['starting_balance'];
+            $tradeReport->latest_equity = (float) $tradeAccount['package']['starting_balance'];
             $tradeReport->status = 'idle';
             $tradeReport->save();
 
@@ -113,11 +119,11 @@ class TradingAccountCredential extends Controller
         try {
             $data = array_filter($request->except('_token'));
 
-            $validator = $this->validateUserInput($data);
-
-            if ($validator->fails()) {
-                return response()->json(['errors' => $validator->errors()], 422);
-            }
+//            $validator = $this->validateUserInput($data);
+//
+//            if ($validator->fails()) {
+//                return response()->json(['errors' => $validator->errors()], 422);
+//            }
 
             $item = TradingAccountCredentialModel::where('id', $id)->where('account_id', auth()->user()->account_id)->first();
 

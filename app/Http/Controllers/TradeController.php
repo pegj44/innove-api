@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\UnitResponse;
 use App\Events\UnitsEvent;
+use App\Models\Funder;
 use App\Models\PairedItems;
 use App\Models\TradeHistoryModel;
 use App\Models\TradeHistoryV2Model;
@@ -128,14 +129,22 @@ class TradeController extends Controller
         }
 
         $queueData = maybe_unserialize($queueItem->data);
-//        $itemData = $queueData[$dataFormatted['itemId']];
+
+        $queueData[$dataFormatted['itemId']]['new_equity'] = $dataFormatted['latestEquity'];
+        $queueItem->data = maybe_serialize($queueData);
+        $queueItem->update();
 
         unset($queueData[$dataFormatted['itemId']]);
 
         $matchPairId = array_keys($queueData);
         $matchPairData = $queueData[$matchPairId[0]];
 
-        $tradeAccount = TradeReport::with(['tradingAccountCredential', 'tradingAccountCredential.historyV3'])
+        $tradeAccount = TradeReport::with([
+            'tradingAccountCredential',
+            'tradingAccountCredential.package',
+            'tradingAccountCredential.package.funder',
+            'tradingAccountCredential.historyV3'
+        ])
             ->where('account_id', auth()->user()->account_id)
             ->where('id', $dataFormatted['itemId'])
             ->first();
@@ -164,6 +173,8 @@ class TradeController extends Controller
     public static function recordTradeHistory($tradeAccount, $latestEquity)
     {
         $latestEquity = (float) $latestEquity;
+        $currentPhase = '';
+
         $tradeHistory = TradeHistoryV3Model::where('trade_account_credential_id', $tradeAccount->trade_account_credential_id)
             ->latest('created_at')
             ->first();
@@ -258,17 +269,17 @@ class TradeController extends Controller
 
     public static function getCalculatedRdd($data)
     {
-        $currentPhase = str_replace('phase-', '', $data['trading_account_credential']['current_phase']);
+        $package = new FunderPackageDataController($data);
         $highestBalArr = [];
 
-        $startingBal = (float) $data['trading_account_credential']['starting_balance'];
+        $startingBal = $package->getStartingBalance();
         $latestEqty = (float) $data['latest_equity'];
-        $maxDrawdown = (float) $data['trading_account_credential']['phase_'. $currentPhase .'_max_drawdown'];
+        $maxDrawdown = $package->getMaxDrawdown();
 
-        if ($data['trading_account_credential']['drawdown_type'] === 'trailing_endofday') {
+        if ($package->getDrawdownType() === 'trailing_endofday') {
             if (!empty($data['trading_account_credential']['history_v3'])) {
                 foreach ($data['trading_account_credential']['history_v3'] as $tradeItem) {
-                    if ($tradeItem['status'] === $data['trading_account_credential']['current_phase']) {
+                    if ($tradeItem['status'] === $package->getPhase()) {
                         $highestBalArr[] = (float) $tradeItem['highest_balance'];
                     }
                 }
@@ -281,16 +292,13 @@ class TradeController extends Controller
                 return $latestEqty - $startingBal;
             }
 
-            if ($highestBal <= $startingBal) {
-                $maxThreshold = $startingBal - $maxDrawdown;
-            } else {
-                $maxThreshold = $highestBal - $maxDrawdown;
-            }
+            $staticThreshold = $startingBal - $maxDrawdown;
+            $maxThreshold = max($highestBal - $maxDrawdown, $staticThreshold);
 
-            return $latestEqty - $maxThreshold;
+            return floor($latestEqty - $maxThreshold);
         }
 
-        if ($data['trading_account_credential']['drawdown_type'] === 'static') {
+        if ($package->getDrawdownType() === 'static') {
             $maxTreshold = $startingBal - $maxDrawdown;
             return $latestEqty - $maxTreshold;
         }
@@ -300,18 +308,14 @@ class TradeController extends Controller
 
     private function getStatusByLatestEquity($tradeAccount, $latestEquity)
     {
+        $package = new FunderPackageDataController($tradeAccount);
         $tradeAccount = $tradeAccount->toArray();
-        $maxDrawdownAllowance = 50;
 
         $latestEquity = (float) $latestEquity;
-//        $startingBalance = (float) $tradeAccount['trading_account_credential']['starting_balance'];
-        $currentPhase = str_replace('-', '_', $tradeAccount['trading_account_credential']['current_phase']);
-        $maxDrawdown = (float) $tradeAccount['trading_account_credential'][$currentPhase .'_max_drawdown'] + $maxDrawdownAllowance;
-        $dailyDrawdown = (float) $tradeAccount['trading_account_credential'][$currentPhase .'_daily_drawdown'];
-        $dailyTp = (float) $tradeAccount['trading_account_credential'][$currentPhase .'_daily_target_profit'];
+        $dailyDrawdown = $package->getDailyDrawdown();
+        $dailyTp = $package->getDailyTargetProfit();
         $startingDailyEquity = (float) $tradeAccount['starting_daily_equity'];
 
-//        $totalAsset = $latestEquity - $startingBalance;
         $pnl = $latestEquity - $startingDailyEquity;
 
         $rdd = self::getCalculatedRdd($tradeAccount);
@@ -323,38 +327,47 @@ class TradeController extends Controller
             ]
         ], true));
 
-        if ($rdd !== null && $rdd < 100) {
+        if ($rdd !== null && $rdd <= 100) {
             return 'breached';
         }
 
-        if (!empty($dailyDrawdown)) {
-//            if ($pnl >= ($dailyTp / 2) || $pnl <= -($dailyDrawdown/2)) {
-//                return 'abstained';
-//            }
-
-            $positiveThreshold = $dailyDrawdown * 0.9;
-            $negativeThreshold = -$dailyDrawdown * 0.9;
-
-            info(print_r([
-                'tradeReport' => [
-                    'funder' => (!empty($tradeAccount['trading_account_credential']['funder_account_id']))? $tradeAccount['trading_account_credential']['funder_account_id'] : 'no funder',
-                    '$dailyDrawdown' => $dailyDrawdown,
-                    '$positiveThreshold' => $positiveThreshold,
-                    '$negativeThreshold' => $negativeThreshold,
-                    '$pnl' => $pnl,
-                    'isAbstained' => ($pnl >= $positiveThreshold || $pnl <= $negativeThreshold)
-                ]
-            ], true));
-
-            if ($pnl >= $positiveThreshold || $pnl <= $negativeThreshold) {
+        if ($pnl > 0) {
+            $dailyTp = $dailyTp * 0.9;
+            if ($pnl >= $dailyTp) {
                 return 'abstained';
             }
-
         } else {
-            if ($pnl >= ($dailyTp / 2)) {
+            $dailyDrawdown = $dailyDrawdown * 0.9;
+            $pnl = -$pnl;
+            if ($pnl >= $dailyDrawdown) {
                 return 'abstained';
             }
         }
+
+//        if (!empty($dailyDrawdown)) {
+//            $positiveThreshold = $dailyDrawdown * 0.9;
+//            $negativeThreshold = -$dailyDrawdown * 0.9;
+//
+//            info(print_r([
+//                'tradeReport' => [
+//                    'funder' => (!empty($tradeAccount['trading_account_credential']['funder_account_id']))? $tradeAccount['trading_account_credential']['funder_account_id'] : 'no funder',
+//                    '$dailyDrawdown' => $dailyDrawdown,
+//                    '$positiveThreshold' => $positiveThreshold,
+//                    '$negativeThreshold' => $negativeThreshold,
+//                    '$pnl' => $pnl,
+//                    'isAbstained' => ($pnl >= $positiveThreshold || $pnl <= $negativeThreshold)
+//                ]
+//            ], true));
+//
+//            if ($pnl >= $positiveThreshold || $pnl <= $negativeThreshold) {
+//                return 'abstained';
+//            }
+//
+//        } else {
+//            if ($pnl >= ($dailyTp / 2)) {
+//                return 'abstained';
+//            }
+//        }
 
         return 'idle';
     }
@@ -404,9 +417,12 @@ class TradeController extends Controller
 
         $items = TradeReport::with([
             'tradingAccountCredential',
-            'tradingAccountCredential.funder',
+//            'tradingAccountCredential.funder',
+            'tradingAccountCredential.package',
+            'tradingAccountCredential.package.funder',
             'tradingAccountCredential.userAccount.funderAccountCredential',
-            'tradingAccountCredential.userAccount.tradingUnit'
+            'tradingAccountCredential.userAccount.tradingUnit',
+            'tradingAccountCredential.historyV3'
         ])
         ->whereIn('id', $itemIds)
         ->get();
@@ -423,51 +439,54 @@ class TradeController extends Controller
 
         foreach ($items->toArray() as $item) {
 
+            $package = new FunderPackageDataController($item);
+
             $dailyEquity = (float) $item['starting_daily_equity'];
             $latestEquity = (float) $item['latest_equity'];
             $pnl = $latestEquity - $dailyEquity;
 
             $credential = getFunderAccountCredential($item);
 
-            $currentPase = str_replace('phase-', '', $item['trading_account_credential']['current_phase']);
-            $dailyDrawdown = (float) $item['trading_account_credential']['phase_'. $currentPase .'_daily_drawdown'];
-            $maxDrawDown = (float) $item['trading_account_credential']['phase_'. $currentPase .'_max_drawdown'];
-            $dailyTargetProfit  = (float) $item['trading_account_credential']['phase_'. $currentPase .'_daily_target_profit'];
+            $dailyDrawdown = $package->getDailyDrawdown();
+            $maxDrawDown = $package->getMaxDrawdown();
+            $dailyTargetProfit  = $package->getDailyTargetProfit();
 
             if (empty($dailyDrawdown)) {
-                $dailyDrawdown = (float) $item['trading_account_credential']['starting_balance'] * 0.015; // default daily drawdown
+                $dailyDrawdown = $package->getStartingBalance() * 0.015; // default daily drawdown
             }
 
             if ($pnl < 0) {
                 $dailyDrawdown = $pnl + $dailyDrawdown;
             }
 
+            $rdd = self::getCalculatedRdd($item);
+
             $data[$item['id']] = [
                 'id' => $item['id'],
-                'funder' => $item['trading_account_credential']['funder']['alias'],
-                'funder_theme' => $item['trading_account_credential']['funder']['theme'],
+                'funder' => $package->getFunderAlias(),
+                'funder_theme' => $package->getFunderTheme(),
                 'funder_account_id_long' => $item['trading_account_credential']['funder_account_id'],
                 'funder_account_id_short' => getFunderAccountShortName($item['trading_account_credential']['funder_account_id']),
                 'unit_name' => $item['trading_account_credential']['user_account']['trading_unit']['name'],
                 'unit_id' => $item['trading_account_credential']['user_account']['trading_unit']['unit_id'],
-                'starting_balance' => (float) $item['trading_account_credential']['starting_balance'],
+                'starting_balance' => $package->getStartingBalance(),
                 'starting_equity' => $item['starting_daily_equity'],
                 'latest_equity' => $item['latest_equity'],
                 'pnl' => number_format($pnl, 2),
-                'rdd' => round(self::getCalculatedRdd($item), 0),
-                'symbol' => $item['trading_account_credential']['symbol'],
-                'order_amount' => TradePairAccountsController::getCalculatedOrderAmountV2($item, $item['trading_account_credential']['asset_type']),
-                'tp' => TradePairAccountsController::getTakeProfitTicks($item),
-                'sl' => TradePairAccountsController::getStopLossTicks($item),
+                'rdd' => (is_numeric($rdd))? round($rdd, 0) : $rdd,
+                'symbol' => $package->getSymbol(),
+                'order_amount' => TradePairAccountsController::getCalculatedOrderAmountV2($item, $package->getAssetType()),
+                'tp' => TradePairAccountsController::getTakeProfitTicks($package->getAssetType()),
+                'sl' => TradePairAccountsController::getStopLossTicks($package->getAssetType()),
                 'remaining_target_profit' => getRemainingTargetProfit($item),
                 'daily_target_profit' => $dailyTargetProfit,
-                'asset_type' => $item['trading_account_credential']['asset_type'],
+                'asset_type' => $package->getAssetType(),
                 'daily_draw_down' => $dailyDrawdown,
                 'max_draw_down' => $maxDrawDown,
-                'platform_type' => $item['trading_account_credential']['platform_type'],
+                'platform_type' => $package->getPlatformType(),
                 'login_username' => $credential['loginUsername'],
                 'login_password' => $credential['loginPassword'],
-                'phase' => $item['trading_account_credential']['current_phase'],
+                'phase' => $package->getPhase(),
                 'data' => $item
             ];
         }
@@ -644,7 +663,7 @@ class TradeController extends Controller
         }
 
         foreach ($data as $itemId => $item) {
-            $isProcessRecorded = $this->recordUnitProcess($item, $tradeQueue->id, 'initiate-trade');
+//            $isProcessRecorded = $this->recordUnitProcess($item, $tradeQueue->id, 'initiate-trade');
             $this->initiateUnitTrade($itemId, $item, $queueId, $tradeQueue->id, true);
         }
 
@@ -664,6 +683,9 @@ class TradeController extends Controller
 
     private function dispatchUnitTrade($item, $itemId, $queueId, $tradeQueueId)
     {
+//        info(print_r([
+//            'dispatchUnitTrade' => $item
+//        ], true));
         UnitsEvent::dispatch(getUnitAuthId(), [
             'account_id' => $item['funder_account_id_long'],
             'account_id_short' => $item['funder_account_id_short'],

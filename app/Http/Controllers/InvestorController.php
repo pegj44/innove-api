@@ -11,7 +11,7 @@ class InvestorController extends Controller
     public function getOngoingTrades(Request $request)
     {
         $phase = $request->get('current_phase');
-        $items = TradeReport::with(['tradingAccountCredential.userAccount.tradingUnit', 'tradingAccountCredential.funder.metadata'])
+        $items = TradeReport::with(['tradingAccountCredential.package', 'tradingAccountCredential.package.funder', 'tradingAccountCredential.userAccount.tradingUnit', 'tradingAccountCredential.funder.metadata'])
             ->where('account_id', auth()->user()->account_id)
             ->where('status', 'trading');
 

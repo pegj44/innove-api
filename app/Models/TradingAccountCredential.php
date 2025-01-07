@@ -36,7 +36,8 @@ class TradingAccountCredential extends Model
         'platform_login_username',
         'platform_login_password',
         'drawdown_type',
-        'priority'
+        'priority',
+        'funder_package_id'
     ];
 
     public $attributes = [
@@ -57,7 +58,13 @@ class TradingAccountCredential extends Model
         'platform_login_username' => '',
         'platform_login_password' => '',
         'drawdown_type' => '',
-        'priority' => ''
+        'priority' => '',
+//        'funder_id' => 0,
+        'starting_balance' => '',
+        'asset_type' => '',
+        'symbol' => '',
+        'current_phase' => '',
+        'platform_type' => '',
     ];
 
     public function account()
@@ -68,6 +75,11 @@ class TradingAccountCredential extends Model
     public function funder()
     {
         return $this->belongsTo(Funder::class, 'funder_id');
+    }
+
+    public function package()
+    {
+        return $this->belongsTo(FunderPackagesModel::class, 'funder_package_id');
     }
 
     public function userAccount()

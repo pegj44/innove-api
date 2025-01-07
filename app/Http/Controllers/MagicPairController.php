@@ -51,10 +51,11 @@ class MagicPairController extends Controller
             $priority = [];
 
             foreach ($pair as $pairItem) {
-                $currentPhase = str_replace('phase-', '', $pairItem['trading_account_credential']['current_phase']);
-                $dailyDrawDown = (float) $pairItem['trading_account_credential']['phase_'. $currentPhase .'_daily_drawdown'];
-                $startingBalance = (float) $pairItem['trading_account_credential']['starting_balance'];
-                $maxDrawDown = (float) $pairItem['trading_account_credential']['phase_'. $currentPhase .'_max_drawdown'];
+
+                $package = new FunderPackageDataController($pairItem);
+                $dailyDrawDown = $package->getDailyDrawdown();
+                $startingBalance = $package->getStartingBalance();
+                $maxDrawDown = $package->getMaxDrawdown();
                 $latestEquity = (float) $pairItem['latest_equity'];
                 $drawDownHandler = $startingBalance - $maxDrawDown;
 
@@ -64,19 +65,19 @@ class MagicPairController extends Controller
                 $priority[$pairItem['trading_account_credential']['priority']] = $pairItem['id'];
 
                 $pairData[$pairItem['id']] = [
-                    'symbol' => $pairItem['trading_account_credential']['symbol'],
+                    'symbol' => $package->getSymbol(),
                     'order_amount' => '',
                     'tp' => '',
                     'sl' => '',
                     'purchase_type' => '',
                     'unit_id' => $pairItem['trading_account_credential']['user_account']['trading_unit']['unit_id'],
-                    'platform_type' => $pairItem['trading_account_credential']['platform_type'],
+                    'platform_type' => $package->getPlatformType(),
                     'login_username' => $pairItem1Credential['loginUsername'],
                     'login_password' => $pairItem1Credential['loginPassword'],
                     'funder_account_id_long' => $pairItem['trading_account_credential']['funder_account_id'],
                     'funder_account_id_short' => getFunderAccountShortName($pairItem['trading_account_credential']['funder_account_id']),
-                    'funder' => $pairItem['trading_account_credential']['funder']['alias'],
-                    'funder_theme' => $pairItem['trading_account_credential']['funder']['theme'],
+                    'funder' => $package->getFunderAlias(),
+                    'funder_theme' => $package->getFunderTheme(),
                     'unit_name' => $pairItem['trading_account_credential']['user_account']['trading_unit']['name'],
                     'starting_balance' => $startingBalance,
                     'starting_equity' => $pairItem['starting_daily_equity'],
@@ -208,6 +209,9 @@ class MagicPairController extends Controller
     {
         $score = 0;
 
+        $item1Package = new FunderPackageDataController($item);
+        $item2Package = new FunderPackageDataController($other);
+
         // Positive calculation of equity difference (weight = 5)
         $itemEquityDiff = $item['latest_equity'] - $item['starting_daily_equity'];
         $otherEquityDiff = $other['latest_equity'] - $other['starting_daily_equity'];
@@ -221,7 +225,7 @@ class MagicPairController extends Controller
         $score += (100000 - $equityDifference) / 1000; // Normalize larger differences to lower scores
 
         // Different funder alias (weight = 3)
-        if ($item['trading_account_credential']['funder']['alias'] !== $other['trading_account_credential']['funder']['alias']) {
+        if ($item1Package->getFunderAlias() !== $item2Package->getFunderAlias()) {
             $score += 3;
         }
 
@@ -256,6 +260,8 @@ class MagicPairController extends Controller
         $items = TradeReport::with([
                 'TradingAccountCredential',
                 'TradingAccountCredential.funder',
+                'TradingAccountCredential.package',
+                'TradingAccountCredential.package.funder',
                 'TradingAccountCredential.userAccount.tradingUnit',
                 'TradingAccountCredential.userAccount.funderAccountCredential',
                 'TradingAccountCredential.historyV3'

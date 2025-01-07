@@ -35,6 +35,11 @@ class Funder extends Model
         return $this->hasMany(FundersMetadata::class);
     }
 
+    public function packages()
+    {
+        return $this->hasMany(FunderPackagesModel::class, 'funder_id');
+    }
+
 //    public function credentials()
 //    {
 //        return $this->hasMany(TradingAccountCredential::class, 'funder_id');

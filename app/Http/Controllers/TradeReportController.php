@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\TradePair;
+use App\Models\TradeQueueModel;
 use App\Models\TradeReport;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -10,6 +11,24 @@ use Illuminate\Support\Facades\Validator;
 
 class TradeReportController extends Controller
 {
+    public function getLatestTrades()
+    {
+        $trades = TradeQueueModel::where('account_id', auth()->user()->account_id)
+            ->where('status', 'closed')
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        if (empty($trades)) {
+            return response()->json([]);
+        }
+
+        foreach ($trades as $trade) {
+            $trade->data = maybe_unserialize($trade->data);
+        }
+
+        return response()->json($trades);
+    }
+
     public function reportCloseTrade(Request $request)
     {
         $dataRaw = $request->get('data');
@@ -60,6 +79,8 @@ class TradeReportController extends Controller
         $data = $request->all();
         $items = TradeReport::with(
             'tradingAccountCredential.userAccount.tradingUnit',
+            'tradingAccountCredential.package',
+            'tradingAccountCredential.package.funder',
             'tradingAccountCredential.funder.metadata',
             'tradingAccountCredential.userAccount.funderAccountCredential',
             'tradingAccountCredential.historyV3',

@@ -21,7 +21,7 @@ class UpdateTradeReportEquity extends Command
     {
         $tradingHistoryArr = [];
 
-        $reports = TradeReport::with('tradingAccountCredential.historyV3')
+        $reports = TradeReport::with(['tradingAccountCredential.historyV3', 'tradingAccountCredential.package'])
             ->whereColumn('starting_daily_equity', '!=', 'latest_equity')
             ->get();
 
@@ -36,13 +36,17 @@ class UpdateTradeReportEquity extends Command
 
             $report->save();
 
-            $highestbal = (float) $report->tradingAccountCredential->historyV3->max('highest_balance');
+            $currentPhase = $report->tradingAccountCredential->package->current_phase;
+            $highestbal = (float) $report->tradingAccountCredential
+                ->historyV3()
+                ->where('status', $currentPhase)
+                ->max('highest_balance');
 
             $tradingHistoryArr[] = [
                 'trade_account_credential_id' => $report->trade_account_credential_id,
                 'starting_daily_equity' => (float) $startingDailyEquity,
                 'latest_equity' => $report->latest_equity,
-                'status' => $report->tradingAccountCredential->current_phase,
+                'status' => $currentPhase,
                 'highest_balance' => ($report->latest_equity > $highestbal)? $report->latest_equity : $highestbal,
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),

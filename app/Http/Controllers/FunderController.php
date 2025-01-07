@@ -10,11 +10,6 @@ use Illuminate\Support\Facades\Validator;
 
 class FunderController extends Controller
 {
-    public function packages()
-    {
-        return [];
-    }
-
     /**
      * Display a listing of the resource.
      */
