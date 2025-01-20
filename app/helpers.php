@@ -1,5 +1,34 @@
 <?php
 
+function getRemainingDailyStopLoss($item)
+{
+    $startingBal = (float) $item['starting_daily_equity'];
+    $latestEqty = (float) $item['latest_equity'];
+    $dailyDrawDown = (float) $item['trading_account_credential']['package']['daily_drawdown'];
+
+    $pnl = $latestEqty - $startingBal;
+
+    if ($pnl < 0) {
+        return floor($dailyDrawDown + $pnl);
+    }
+
+    return $dailyDrawDown;
+}
+
+function getRemainingDailyTargetProfit($item)
+{
+    $startingBal = (float) $item['starting_daily_equity'];
+    $latestEqty = (float) $item['latest_equity'];
+
+    $pnl = $latestEqty - $startingBal;
+
+    if ($pnl > 0) {
+        return floor($item['trading_account_credential']['package']['daily_target_profit'] - $pnl);
+    }
+
+    return $item['trading_account_credential']['package']['daily_target_profit'];
+}
+
 function getRemainingTargetProfit($item)
 {
     $package = $item['trading_account_credential']['package'];
@@ -30,6 +59,25 @@ function getFunderAccountShortName($accountId)
     }
 
     return (strlen($accountId) > 7)? substr($accountId, 0, 7) .'...' : $accountId;
+}
+
+function getFirstTwoDecimals($number)
+{
+    // Convert the number to a string
+    $numberString = number_format($number, 10, '.', ''); // Ensures enough decimals
+
+    // Find the position of the decimal point
+    $decimalPos = strpos($numberString, '.');
+
+    // If there's no decimal point, return the number as is
+    if ($decimalPos === false) {
+        return $number;
+    }
+
+    // Extract the part before and two places after the decimal point
+    $result = substr($numberString, 0, $decimalPos + 3);
+
+    return $result;
 }
 
 function getFunderAccountCredential($data)

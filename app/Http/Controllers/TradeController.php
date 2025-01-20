@@ -317,15 +317,7 @@ class TradeController extends Controller
         $startingDailyEquity = (float) $tradeAccount['starting_daily_equity'];
 
         $pnl = $latestEquity - $startingDailyEquity;
-
         $rdd = self::getCalculatedRdd($tradeAccount);
-
-        info(print_r([
-            'getStatusByLatestEquity' => [
-                'funder' => (!empty($tradeAccount['trading_account_credential']['funder_account_id']))? $tradeAccount['trading_account_credential']['funder_account_id'] : 'no funder',
-                'rdd' => $rdd
-            ]
-        ], true));
 
         if ($rdd !== null && $rdd <= 100) {
             return 'breached';
@@ -417,7 +409,92 @@ class TradeController extends Controller
 
         $items = TradeReport::with([
             'tradingAccountCredential',
-//            'tradingAccountCredential.funder',
+            'tradingAccountCredential.package',
+            'tradingAccountCredential.package.funder',
+            'tradingAccountCredential.userAccount.funderAccountCredential',
+            'tradingAccountCredential.userAccount.tradingUnit',
+            'tradingAccountCredential.historyV3'
+        ])
+            ->whereIn('id', $itemIds)
+            ->get();
+
+        if (empty($items)) {
+            return response()->json([]);
+        }
+
+        if ($items->count() < 1) {
+            return response()->json(['error' => 'Unable to proceed pairing. One of the paired items no longer exists.']);
+        }
+
+        $pairLimits = new PairLimitsController($items);
+        $pairLimits = $pairLimits->getLimits();
+
+        $data = [];
+
+        foreach ($items->toArray() as $item) {
+
+            $package = new FunderPackageDataController($item);
+
+            $dailyEquity = (float) $item['starting_daily_equity'];
+            $latestEquity = (float) $item['latest_equity'];
+            $pnl = $latestEquity - $dailyEquity;
+
+            $credential = getFunderAccountCredential($item);
+
+            $dailyDrawdown = $package->getDailyDrawdown();
+            $maxDrawDown = $package->getMaxDrawdown();
+            $dailyTargetProfit  = $package->getDailyTargetProfit();
+
+            if (empty($dailyDrawdown)) {
+                $dailyDrawdown = $package->getStartingBalance() * 0.015; // default daily drawdown
+            }
+
+            if ($pnl < 0) {
+                $dailyDrawdown = $pnl + $dailyDrawdown;
+            }
+
+            $rdd = self::getCalculatedRdd($item);
+
+            $data[$item['id']] = [
+                'id' => $item['id'],
+                'funder' => $package->getFunderAlias(),
+                'funder_theme' => $package->getFunderTheme(),
+                'funder_account_id_long' => $item['trading_account_credential']['funder_account_id'],
+                'funder_account_id_short' => getFunderAccountShortName($item['trading_account_credential']['funder_account_id']),
+                'unit_name' => $item['trading_account_credential']['user_account']['trading_unit']['name'],
+                'unit_id' => $item['trading_account_credential']['user_account']['trading_unit']['unit_id'],
+                'starting_balance' => $package->getStartingBalance(),
+                'starting_equity' => $item['starting_daily_equity'],
+                'latest_equity' => $item['latest_equity'],
+                'pnl' => number_format($pnl, 2),
+                'rdd' => (is_numeric($rdd))? round($rdd, 0) : $rdd,
+                'symbol' => $package->getSymbol(),
+                'order_amount' => $pairLimits[$item['id']]['tp']['lots'],
+                'tp' => $pairLimits[$item['id']]['tp']['ticks'],
+                'sl' => $pairLimits[$item['id']]['sl']['ticks'],
+                'remaining_target_profit' => getRemainingTargetProfit($item),
+                'daily_target_profit' => $dailyTargetProfit,
+                'asset_type' => $package->getAssetType(),
+                'daily_draw_down' => $dailyDrawdown,
+                'max_draw_down' => $maxDrawDown,
+                'package_tag' => $item['trading_account_credential']['package']['name'],
+                'platform_type' => $package->getPlatformType(),
+                'login_username' => $credential['loginUsername'],
+                'login_password' => $credential['loginPassword'],
+                'phase' => $package->getPhase(),
+                'data' => $item
+            ];
+        }
+
+        return response()->json($data);
+    }
+
+    public function pairUnits_old(Request $request)
+    {
+        $itemIds = $request->all();
+
+        $items = TradeReport::with([
+            'tradingAccountCredential',
             'tradingAccountCredential.package',
             'tradingAccountCredential.package.funder',
             'tradingAccountCredential.userAccount.funderAccountCredential',
@@ -483,6 +560,7 @@ class TradeController extends Controller
                 'asset_type' => $package->getAssetType(),
                 'daily_draw_down' => $dailyDrawdown,
                 'max_draw_down' => $maxDrawDown,
+                'package_tag' => $item['trading_account_credential']['package']['name'],
                 'platform_type' => $package->getPlatformType(),
                 'login_username' => $credential['loginUsername'],
                 'login_password' => $credential['loginPassword'],
@@ -506,7 +584,7 @@ class TradeController extends Controller
 
         $data = maybe_unserialize($queueItem->data);
         $currentUtcTime = Carbon::now('UTC');
-        $futureTime = $currentUtcTime->addSeconds(3); // seconds of delay allowance before trade button click.
+        $futureTime = $currentUtcTime->addSeconds(10); // seconds of delay allowance before trade button click.
 
         foreach ($data as $unitTradeItem) {
             $isUnitConnected = PusherController::checkUnitConnection(getUnitAuthId(), $unitTradeItem['unit_id']);
@@ -541,6 +619,7 @@ class TradeController extends Controller
                 'purchase_type' => $purchaseType,
                 'queue_id' => $queueItem->id,
                 'itemId' => $unitId,
+                'order_amount' => $unitItem['order_amount'],
                 'funder' => [
                     'alias' => $unitItem['funder'],
                     'theme' => $unitItem['funder_theme']

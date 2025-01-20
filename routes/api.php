@@ -11,8 +11,10 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\CalculationsController;
 use App\Http\Controllers\FunderAccountCredentialController;
 use App\Http\Controllers\FunderController;
+use App\Http\Controllers\FunderPackageDataController;
 use App\Http\Controllers\FunderPackagesController;
 use App\Http\Controllers\MachinesController;
+use App\Http\Controllers\PairLimitsController;
 use App\Http\Controllers\PusherController;
 use App\Http\Controllers\TradeController;
 use App\Http\Controllers\TradePairAccountsController;
@@ -349,9 +351,11 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 
 Route::post('/aw-snap', function(Request $request) {
     info(print_r([
-        'aw-snap1' => $request->all()
+        'aw-snap3' => $request->all()
     ], true));
 })->middleware('guest')->name('aw-snap');
+
+
 
 Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 {
@@ -361,24 +365,58 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
     Route::post('dev', function(Request $request)
     {
-        $dailyTp = 750;
-        $dailyDrawdown = 900;
-        $pnl = -1950;
+        $queueItem = TradeQueueModel::where('account_id', auth()->user()->account_id)
+            ->where('id', 2541)
+            ->first();
 
-        if ($pnl > 0) {
-            $dailyTp = $dailyTp * 0.9;
-            if ($pnl >= $dailyTp) {
-                return 'abstained';
-            }
-        } else {
-            $dailyDrawdown = $dailyDrawdown * 0.9;
-            $pnl = -$pnl;
-            if ($pnl >= $dailyDrawdown) {
-                return 'abstained';
-            }
+
+        $data = maybe_unserialize($queueItem->data);
+
+        !d($data);
+        die();
+
+
+
+        $latestEquity = 50666.08;
+        $startingDailyEquity = 51446.68;
+        $dailyDrawdown = 800;
+
+        $pnl = $latestEquity - $startingDailyEquity;
+
+        $dailyDrawdown = $dailyDrawdown * 0.9;
+        $pnl = -$pnl;
+        if ($pnl >= $dailyDrawdown) {
+            return 'abstained';
+        }
+        echo 'idle';
+        die();
+
+        $itemIds = $request->all();
+
+        $items = TradeReport::with([
+            'tradingAccountCredential',
+            'tradingAccountCredential.package',
+            'tradingAccountCredential.package.funder',
+            'tradingAccountCredential.userAccount.funderAccountCredential',
+            'tradingAccountCredential.userAccount.tradingUnit',
+            'tradingAccountCredential.historyV3'
+        ])
+            ->whereIn('id', $itemIds)
+            ->get();
+
+        if (empty($items)) {
+            return response()->json([]);
         }
 
-        return 'idle';
+        if ($items->count() < 1) {
+            return response()->json(['error' => 'Unable to proceed pairing. One of the paired items no longer exists.']);
+        }
+
+        $pairLimits = new PairLimitsController($items);
+        $pairLimits = $pairLimits->getLimits();
+
+        dd($pairLimits);
+
         die();
 
 //        $tradeAccount = TradeReport::with(['tradingAccountCredential', 'tradingAccountCredential.historyV3', 'tradingAccountCredential.package', 'tradingAccountCredential.package.funder'])
