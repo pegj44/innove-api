@@ -60,8 +60,8 @@ class TradePairAccountsController extends Controller
     public function removePair(Request $request, string $id)
     {
         $queue = TradeQueueModel::where('id', $id)->first();
-        $pairItemIds = maybe_unserialize($queue->data);
-        $pairItemIds = array_keys($pairItemIds);
+        $pairItems = maybe_unserialize($queue->data);
+        $pairItemIds = array_keys($pairItems);
 
         foreach ($pairItemIds as $pairItemId) {
             $item = TradeReport::where('id', $pairItemId)->first();
@@ -69,25 +69,27 @@ class TradePairAccountsController extends Controller
             $item->update();
         }
 
-        $queue->status = 'closed';
-        $queue->update();
+        $type = $request->get('type');
 
-//        $item1 = TradeReport::where('id', $request->get('pair1'))->first();
-//        $item2 = TradeReport::where('id', $request->get('pair2'))->first();
-//
-//        if ($request->get('updateStatus')) {
-//            $item1->status = 'idle';
-//            $item2->status = 'idle';
-//            $item->delete();
-//        } else {
-//            $item->status = 'pairing';
-//            $item1->status = 'pairing';
-//            $item2->status = 'pairing';
-//            $item->update();
-//        }
-//
-//        $item1->update();
-//        $item2->update();
+        if ($type === 'close') {
+            $queue->status = 'closed';
+            $queue->update();
+        }
+
+        if ($type === 'cancel') {
+            $currentDateTime = Carbon::now('Asia/Manila');
+
+            foreach ($pairItems as $itemId => $pairItem) {
+                UnitsEvent::dispatch(getUnitAuthId(), [
+                    'queue_id' => $queue->id,
+                    'itemId' => $itemId,
+                    'type' => $type,
+                    'dateTime' => $currentDateTime->format('F j, Y g:i A'),
+                ], 'cancel-pairing', $pairItem['platform_type'], $pairItem['unit_id']);
+            }
+
+            $queue->delete();
+        }
 
         return response()->json(['id' => $id]);
     }
@@ -293,6 +295,7 @@ class TradePairAccountsController extends Controller
                 'unit_ready' => maybe_unserialize($item->unit_ready),
                 'status' => $item->status,
                 'errors' => maybe_unserialize($item->errors),
+                'pair_status' => $item->pair_status,
                 'closed_items' => $item->closed_items
             ];
 

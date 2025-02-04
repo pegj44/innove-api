@@ -16,6 +16,7 @@ class TradeQueueModel extends Model
         'data',
         'status',
         'unit_ready',
+        'pair_status',
         'errors',
     ];
 

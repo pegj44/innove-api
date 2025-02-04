@@ -6,6 +6,9 @@ function getRemainingDailyStopLoss($item)
     $latestEqty = (float) $item['latest_equity'];
     $dailyDrawDown = (float) $item['trading_account_credential']['package']['daily_drawdown'];
 
+    $percentage = ($dailyDrawDown / $startingBal) * 100;
+    $dailyDrawDown = ($percentage / 100) * $latestEqty;
+
     $pnl = $latestEqty - $startingBal;
 
     if ($pnl < 0) {

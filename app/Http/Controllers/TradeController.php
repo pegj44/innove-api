@@ -25,6 +25,49 @@ class TradeController extends Controller
     public $mandatoryStopLossPercentage = 0.02;
     public $volumeMultiplierPercentage = 0.8;
 
+    public function tradeRecover(Request $request)
+    {
+        $tradeQueueId = $request->get('queue_id');
+
+        $queueItem = TradeQueueModel::where('account_id', auth()->user()->account_id)
+            ->where('id', $tradeQueueId)
+            ->first();
+
+        if (empty($queueItem)) {
+            return response()->json(['error' => 'Trade queue does not exists.']);
+        }
+
+        $queueData = maybe_unserialize($queueItem->data);
+
+        foreach ($queueData as $itemId => $item) {
+            UnitsEvent::dispatch(getUnitAuthId(), [
+                'account_id' => $item['funder_account_id_long'],
+                'account_id_short' => $item['funder_account_id_short'],
+                'purchase_type' => $item['purchase_type'],
+                'symbol' => $item['symbol'],
+                'order_amount' => $item['order_amount'],
+                'take_profit_ticks' => $item['tp'],
+                'stop_loss_ticks' => $item['sl'],
+                'queue_id' => (int) $tradeQueueId,
+                'queue_db_id' => $tradeQueueId,
+                'itemId' => $itemId,
+                'loginUsername' => $item['login_username'],
+                'loginPassword' => $item['login_password'],
+                'funder' => [
+                    'alias' => $item['funder'],
+                    'theme' => $item['funder_theme']
+                ],
+                'unit_name' => $item['unit_name'],
+                'starting_balance' => $item['starting_balance'],
+                'starting_equity' => $item['starting_equity'],
+                'latest_equity' => $item['latest_equity'],
+                'rdd' => $item['rdd']
+            ], 'recover-trade', $item['platform_type'], $item['unit_id']);
+        }
+
+        return response()->json($queueData);
+    }
+
     public function tradeErrorReport(Request $request)
     {
         $itemId = $request->get('itemId');
@@ -49,25 +92,66 @@ class TradeController extends Controller
         $errors = maybe_unserialize($queueItem->errors);
         $errors = (!empty($errors))? $errors : [];
 
-        $errors[$itemId] = $errorMessage;
+        $pairStatus = $request->get('pair_status');
+        $errors[$itemId] = (!empty($pairStatus))? $pairStatus : $errorMessage;
 
         $queueItem->errors = maybe_serialize($errors);
         $queueItem->status = 'error';
+        $queueItem->pair_status = $request->get('pair_status');
 
         $queueItem->update();
+
+        $message = $request->get('message');
 
         UnitResponse::dispatch(auth()->user()->account_id, [
             'queue_db_id' => $tradeQueueId,
             'itemId' => $itemId,
-            'message' => __('Failed to initialize'),
-            'sound' => false
+            'message' => (!empty($message))? $message : __('Failed to initialize'),
+            'sound' => false,
         ], 'trade-initialize-error');
 
         return response()->json($queueItem);
     }
 
     /**
-     * Just let the pair know the trade is closed.
+     * Stop trade action
+     * @param Request $request
+     */
+    public function stopTrade(Request $request)
+    {
+        $queueItem = TradeQueueModel::where('account_id', auth()->user()->account_id)
+            ->where('id', $request->get('queue_id'))
+            ->first();
+
+        if (empty($queueItem)) {
+            return response()->json(['error' => __('Pair queue not found.')]);
+        }
+
+        $queueData = maybe_unserialize($queueItem->data);
+
+        unset($queueData[$request->get('itemId')]);
+
+        $matchPairId = array_keys($queueData);
+        $matchPairData = $queueData[$matchPairId[0]];
+
+        $isUnitConnected = PusherController::checkUnitConnection(getUnitAuthId(), $matchPairData['unit_id']);
+
+        if (!$isUnitConnected) {
+            return response()->json(['error' => __('Unit '. $matchPairData['unit_name'] .' is not connected')]);
+        }
+
+        $currentDateTime = Carbon::now('Asia/Manila');
+
+        UnitsEvent::dispatch(getUnitAuthId(), [
+            'queue_id' => $queueItem->id,
+            'itemId' => $matchPairId[0],
+            'dateTime' => $currentDateTime->format('F j, Y g:i A'),
+            'account_id' => $matchPairData['funder_account_id_long']
+        ], 'stop-trade', $matchPairData['platform_type'], $matchPairData['unit_id']);
+    }
+
+    /**
+     * Let the pair know the trade is closed.
      * @param Request $request
      */
     public function closeTrade(Request $request)
@@ -102,9 +186,21 @@ class TradeController extends Controller
             return response()->json(['error' => __('Unit '. $matchPairData['unit_name'] .' is not connected')]);
         }
 
+        $currentDateTime = Carbon::now('Asia/Manila');
+
+//        info(print_r([
+//            'closetrade' => [
+//                'queue_id' => $queueItem->id,
+//                'itemId' => $matchPairId[0],
+//                'dateTime' => $currentDateTime->format('F j, Y g:i A'),
+//                'account_id' => $matchPairData['funder_account_id_long']
+//            ]
+//        ], true));
+
         UnitsEvent::dispatch(getUnitAuthId(), [
             'queue_id' => $queueItem->id,
             'itemId' => $matchPairId[0],
+            'dateTime' => $currentDateTime->format('F j, Y g:i A'),
             'account_id' => $matchPairData['funder_account_id_long']
         ], 'close-position', $matchPairData['platform_type'], $matchPairData['unit_id']);
     }
@@ -387,6 +483,7 @@ class TradeController extends Controller
 
         if (count($readyUnits) > 1) {
             $queueItem->status = 'pairing';
+            $queueItem->pair_status = '';
             UnitResponse::dispatch(auth()->user()->account_id, [
                 'queue_db_id' => $queueItem->id,
                 'itemId' => $request->get('itemId')
@@ -479,8 +576,8 @@ class TradeController extends Controller
                 'max_draw_down' => $maxDrawDown,
                 'package_tag' => $item['trading_account_credential']['package']['name'],
                 'platform_type' => $package->getPlatformType(),
-                'login_username' => $credential['loginUsername'],
-                'login_password' => $credential['loginPassword'],
+                'login_username' => (!empty($item['trading_account_credential']['platform_login_username']))? $item['trading_account_credential']['platform_login_username'] : $credential['loginUsername'],
+                'login_password' => (!empty($item['trading_account_credential']['platform_login_password']))? $item['trading_account_credential']['platform_login_password'] : $credential['loginPassword'],
                 'phase' => $package->getPhase(),
                 'data' => $item
             ];
@@ -584,7 +681,7 @@ class TradeController extends Controller
 
         $data = maybe_unserialize($queueItem->data);
         $currentUtcTime = Carbon::now('UTC');
-        $futureTime = $currentUtcTime->addSeconds(10); // seconds of delay allowance before trade button click.
+        $futureTime = $currentUtcTime->addSeconds(20); // seconds of delay allowance before trade button click.
 
         foreach ($data as $unitTradeItem) {
             $isUnitConnected = PusherController::checkUnitConnection(getUnitAuthId(), $unitTradeItem['unit_id']);
@@ -620,6 +717,8 @@ class TradeController extends Controller
                 'queue_id' => $queueItem->id,
                 'itemId' => $unitId,
                 'order_amount' => $unitItem['order_amount'],
+                'take_profit_ticks' => $unitItem['tp'],
+                'stop_loss_ticks' => $unitItem['sl'],
                 'funder' => [
                     'alias' => $unitItem['funder'],
                     'theme' => $unitItem['funder_theme']
@@ -712,6 +811,11 @@ class TradeController extends Controller
     public function initiateTradeV2(Request $request)
     {
         $data = $request->get('data');
+        $status = $request->get('status');
+
+        if (empty($status)) {
+            $status = 'pairing';
+        }
 
         foreach ($data as $unitTradeItem) {
             $isUnitConnected = PusherController::checkUnitConnection(getUnitAuthId(), $unitTradeItem['unit_id']);
@@ -730,41 +834,44 @@ class TradeController extends Controller
             $tradeQueue->account_id = auth()->user()->account_id;
             $tradeQueue->queue_id = $queueId;
             $tradeQueue->data = maybe_serialize($data);
-            $tradeQueue->status = 'pairing';
+            $tradeQueue->status = $status;
             $tradeQueue->save();
 
         } else {
             $tradeQueue = $request->get('queueItem');
-            $tradeQueue->status = 'pairing';
+            $tradeQueue->status = $status;
             $tradeQueue->update();
 
             $queueId = $tradeQueue->queue_id;
         }
 
+        $dispatchCommand = $request->get('dispatchCommand');
+
+        if ($dispatchCommand !== false) {
+            $dispatchCommand = true;
+        }
+
         foreach ($data as $itemId => $item) {
 //            $isProcessRecorded = $this->recordUnitProcess($item, $tradeQueue->id, 'initiate-trade');
-            $this->initiateUnitTrade($itemId, $item, $queueId, $tradeQueue->id, true);
+            $this->initiateUnitTrade($itemId, $item, $queueId, $tradeQueue->id, $status, $dispatchCommand);
         }
 
         return response()->json(['message' => __('Account pairing initiated.')]);
     }
 
-    private function initiateUnitTrade($itemId, $item, $queueId, $tradeQueueId, $initiateTrade = false)
+    private function initiateUnitTrade($itemId, $item, $queueId, $tradeQueueId, $status = 'pairing', $dispatchCommand = false)
     {
         $pairUnit = TradeReport::where('id', $itemId)->first();
-        $pairUnit->status = 'pairing';
+        $pairUnit->status = $status;
         $pairUnit->update();
 
-        if ($initiateTrade) {
+        if ($dispatchCommand) {
             $this->dispatchUnitTrade($item, $itemId, $queueId, $tradeQueueId);
         }
     }
 
     private function dispatchUnitTrade($item, $itemId, $queueId, $tradeQueueId)
     {
-//        info(print_r([
-//            'dispatchUnitTrade' => $item
-//        ], true));
         UnitsEvent::dispatch(getUnitAuthId(), [
             'account_id' => $item['funder_account_id_long'],
             'account_id_short' => $item['funder_account_id_short'],

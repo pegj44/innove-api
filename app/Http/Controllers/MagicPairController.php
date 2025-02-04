@@ -119,9 +119,13 @@ class MagicPairController extends Controller
 
             $tradeController = new TradeController();
             $tradeController->initiateTradeV2(new Request([
-                'data' => $this->sortPairByPurchaseType($pairData)
+                'data' => $this->sortPairByPurchaseType($pairData),
+                'dispatchCommand' => false,
+                'status' => 'auto-pairing'
             ]));
         }
+
+        dd($pairData);
 
         return response()->json(['pair2' => $this->accountId]);
     }

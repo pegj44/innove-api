@@ -231,6 +231,7 @@ Route::middleware(['auth:sanctum', 'ability:unit'])->prefix('/unit/')->group(fun
     {
         Route::post('/report/close-trade', 'closePosition');
         Route::post('/close-trade', 'closeTrade');
+        Route::post('/stop-trade', 'stopTrade');
     });
 });
 
@@ -273,6 +274,8 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
         Route::post('trade/error', 'tradeErrorReport');
         Route::post('trade/start', 'startTrade');
+
+        Route::post('trade/recover', 'tradeRecover');
     });
 
     Route::controller(CalculationsController::class)->prefix('calculate')->group(function()
@@ -365,58 +368,13 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
     Route::post('dev', function(Request $request)
     {
-        $queueItem = TradeQueueModel::where('account_id', auth()->user()->account_id)
-            ->where('id', 2541)
-            ->first();
 
-
-        $data = maybe_unserialize($queueItem->data);
-
-        !d($data);
-        die();
-
-
-
-        $latestEquity = 50666.08;
-        $startingDailyEquity = 51446.68;
-        $dailyDrawdown = 800;
-
-        $pnl = $latestEquity - $startingDailyEquity;
-
-        $dailyDrawdown = $dailyDrawdown * 0.9;
-        $pnl = -$pnl;
-        if ($pnl >= $dailyDrawdown) {
-            return 'abstained';
-        }
-        echo 'idle';
-        die();
-
-        $itemIds = $request->all();
-
-        $items = TradeReport::with([
-            'tradingAccountCredential',
-            'tradingAccountCredential.package',
-            'tradingAccountCredential.package.funder',
-            'tradingAccountCredential.userAccount.funderAccountCredential',
-            'tradingAccountCredential.userAccount.tradingUnit',
-            'tradingAccountCredential.historyV3'
-        ])
-            ->whereIn('id', $itemIds)
-            ->get();
-
-        if (empty($items)) {
-            return response()->json([]);
-        }
-
-        if ($items->count() < 1) {
-            return response()->json(['error' => 'Unable to proceed pairing. One of the paired items no longer exists.']);
-        }
-
-        $pairLimits = new PairLimitsController($items);
-        $pairLimits = $pairLimits->getLimits();
-
-        dd($pairLimits);
-
+        UnitsEvent::dispatch(getUnitAuthId(), [
+            'test' => 1
+        ],
+//            'initiate-trade'
+            'do-trade'
+            , 'CTrader_3', '47A323B6');
         die();
 
 //        $tradeAccount = TradeReport::with(['tradingAccountCredential', 'tradingAccountCredential.historyV3', 'tradingAccountCredential.package', 'tradingAccountCredential.package.funder'])
