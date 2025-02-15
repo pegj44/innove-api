@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\UnitResponse;
 use App\Events\UnitsEvent;
+use App\Events\WebPush;
 use App\Models\Funder;
 use App\Models\PairedItems;
 use App\Models\TradeHistoryModel;
@@ -827,6 +828,11 @@ class TradeController extends Controller
             }
         }
 
+        /**
+         * @todo
+         * Add check if items are already paired
+         */
+
         if (empty($request->get('queueItem'))) {
             $queueId = $this->generateQueueId();
 
@@ -851,12 +857,30 @@ class TradeController extends Controller
             $dispatchCommand = true;
         }
 
+        /**
+         * @todo remove after test
+         */
+//        $dispatchCommand = false;
+
         foreach ($data as $itemId => $item) {
 //            $isProcessRecorded = $this->recordUnitProcess($item, $tradeQueue->id, 'initiate-trade');
             $this->initiateUnitTrade($itemId, $item, $queueId, $tradeQueue->id, $status, $dispatchCommand);
         }
 
-        return response()->json(['message' => __('Account pairing initiated.')]);
+
+//        $tradeReport = new TradeReportController();
+//        $items = $tradeReport->getReports(new Request([
+//            'ids' => array_keys($data),
+//            'raw' => true
+//        ]));
+
+//        WebPush::dispatch(auth()->user()->account_id, ['ids' => array_keys($data)], 'pair-units');
+
+
+        return response()->json([
+//            'items' => $items,
+            'message' => __('Account pairing initiated.')
+        ]);
     }
 
     private function initiateUnitTrade($itemId, $item, $queueId, $tradeQueueId, $status = 'pairing', $dispatchCommand = false)

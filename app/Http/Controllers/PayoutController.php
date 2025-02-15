@@ -19,7 +19,12 @@ class PayoutController extends Controller
 
     public function getPayouts()
     {
-        $items = PayoutModel::with(['tradingAccountCredential.tradeReports', 'tradingAccountCredential.funder'])
+        $items = PayoutModel::with([
+            'tradingAccountCredential.tradeReports',
+            'tradingAccountCredential.funder',
+            'tradingAccountCredential.package',
+            'tradingAccountCredential.package.funder',
+        ])
             ->where('account_id', auth()->user()->account_id)
             ->get();
 

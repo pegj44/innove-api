@@ -85,6 +85,10 @@ class TradePairAccountsController extends Controller
                     'itemId' => $itemId,
                     'type' => $type,
                     'dateTime' => $currentDateTime->format('F j, Y g:i A'),
+                    'funder' => [
+                        'alias' => $pairItem['funder'],
+                        'theme' => $pairItem['funder_theme']
+                    ],
                 ], 'cancel-pairing', $pairItem['platform_type'], $pairItem['unit_id']);
             }
 

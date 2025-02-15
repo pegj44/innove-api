@@ -369,12 +369,34 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
     Route::post('dev', function(Request $request)
     {
 
-        UnitsEvent::dispatch(getUnitAuthId(), [
-            'test' => 1
-        ],
-//            'initiate-trade'
-            'do-trade'
-            , 'CTrader_3', '47A323B6');
+        $items = TradeReport::with(
+            'tradingAccountCredential.userAccount.tradingUnit',
+            'tradingAccountCredential.package',
+            'tradingAccountCredential.package.funder',
+            'tradingAccountCredential.funder.metadata',
+            'tradingAccountCredential.userAccount.funderAccountCredential',
+            'tradingAccountCredential.historyV3',
+            'tradingAccountCredential.payouts'
+        )
+            ->where('account_id', auth()->user()->account_id)
+            ->whereHas('tradingAccountCredential', function($query) {
+                $query->where('status', 'active');
+            });
+
+        if ($request->get('ids')) {
+            $items->whereIn('id', [149,192]);
+        }
+
+        dd($items->get());
+
+
+//        UnitsEvent::dispatch(getUnitAuthId(), [
+//            'test' => 1
+//        ],
+//            'cancel-pairing'
+////            'initiate-trade'
+////            'do-trade'
+//            , 'CTrader_3', '47A323B6');
         die();
 
 //        $tradeAccount = TradeReport::with(['tradingAccountCredential', 'tradingAccountCredential.historyV3', 'tradingAccountCredential.package', 'tradingAccountCredential.package.funder'])

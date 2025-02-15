@@ -46,24 +46,31 @@ class PairLimitsController extends Controller
     {
 //        if (!$lots) {
             $targetAmount = (float) $targetAmount;
-            $minSl = 46;
-            $maxSl = 52;
+            $minSl = 65;
+            $maxSl = 75;
             $closestToTarget = 0;
             $finalOrderAmnt = 0;
             $finalTicks = 0;
 
-            while ($minSl <= $maxSl) {
-                $divide = floor($targetAmount) / $minSl;
-                $orderAmnt = floor($divide);
-                $projectedSl = $orderAmnt * $minSl;
+//            while ($minSl <= $maxSl) {
+//                $divide = floor($targetAmount) / $minSl;
+//                $orderAmnt = floor($divide);
+//                $projectedSl = $orderAmnt * $minSl;
+//
+//                if ($projectedSl > $closestToTarget) {
+//                    $closestToTarget = $projectedSl;
+//                    $finalOrderAmnt = $orderAmnt;
+//                    $finalTicks = $minSl;
+//                }
+//                $minSl++;
+//            }
 
-                if ($projectedSl > $closestToTarget) {
-                    $closestToTarget = $projectedSl;
-                    $finalOrderAmnt = $orderAmnt;
-                    $finalTicks = $minSl;
-                }
-                $minSl++;
-            }
+            $finalTicks = rand($minSl, $maxSl);
+            $divide = floor($targetAmount) / $finalTicks;
+            $finalOrderAmnt = floor($divide);
+
+
+
 //        } else {
 //            $finalTicks = floor($targetAmount / $lots);
 //            $finalOrderAmnt = $lots;
@@ -193,10 +200,7 @@ class PairLimitsController extends Controller
         $minLots = 1.3;
         $maxLots = 1.5;
 
-        if ($equity < 49000) {
-//            $minLots = 1;
-//            $maxLots = 1;
-        } elseif ($equity > 60000) {
+        if ($equity > 50000) {
             $minLots = 2.3;
             $maxLots = 2.5;
         }
@@ -300,10 +304,6 @@ class PairLimitsController extends Controller
 
     public function scaleDownFunderPro($itemIds, $pairLimits, $limits)
     {
-        if ($itemIds[0]['trading_account_credential']['package']['current_phase'] === 'phase-3') {
-            return $limits;
-        }
-
         $funders = [
             $itemIds[0]['trading_account_credential']['package']['funder']['alias'],
             $itemIds[1]['trading_account_credential']['package']['funder']['alias']
@@ -322,7 +322,12 @@ class PairLimitsController extends Controller
         $nonFproTp = $limits[$itemIds[$nonFproKey]['id']]['tp']['ticks'];
         $nonFproSL = $limits[$itemIds[$nonFproKey]['id']]['sl']['ticks'];
 
-        $fproLots = $nonFproLots / 2;
+        $fproLots = $nonFproLots;
+
+        if ($itemIds[0]['trading_account_credential']['package']['current_phase'] !== 'phase-3') {
+            $fproLots = $nonFproLots / 2;
+        }
+
         $fproLots = $fproLots / 10;
 
         $limits[$itemIds[$fproKey]['id']]['tp']['lots'] = $fproLots;
@@ -380,39 +385,81 @@ class PairLimitsController extends Controller
     {
         $generatedLots = 0;
 
+        $startingBal1 = (float) $itemIds[0]['trading_account_credential']['package']['starting_balance'];
+        $startingBal2 = (float) $itemIds[1]['trading_account_credential']['package']['starting_balance'];
+
+        $lotsEquityBracket = $startingBal1;
+
+        if ($startingBal1 != $startingBal2) {
+            $lotsEquityBracket = min([$startingBal1, $startingBal2]);
+        }
+
+//        info(print_r([
+//            'convertForexTpSl' => [
+//                'item1' => [
+//                    'tp' => $limits[$pairLimits[0]['id']]['tp'],
+//                    'sl' => $limits[$pairLimits[0]['id']]['sl']
+//                ],
+//                'item2' => [
+//                    'tp' => $limits[$pairLimits[1]['id']]['tp'],
+//                    'sl' => $limits[$pairLimits[1]['id']]['sl']
+//                ]
+//            ]
+//        ], true));
+
         if ($itemIds[0]['trading_account_credential']['package']['asset_type'] === 'forex') {
-            $newTp = $this->convertUnitsToLots($limits[$pairLimits[0]['id']]['tp'], $itemIds[0]['latest_equity']);
+            $newTp = $this->convertUnitsToLots($limits[$pairLimits[0]['id']]['tp'], $lotsEquityBracket);
             $generatedLots = $newTp['lots'];
-            $limits[$pairLimits[0]['id']] = [
-                'tp' => $newTp,
-                'sl' => $this->convertUnitsToLots($limits[$pairLimits[0]['id']]['sl'], $itemIds[0]['latest_equity'], $generatedLots)
-            ];
+
+
 
             if ($itemIds[1]['trading_account_credential']['package']['asset_type'] === 'futures') {
-                $limits[$pairLimits[0]['id']]['sl']['ticks'] = $limits[$pairLimits[0]['id']]['tp']['ticks'] + 20;
-                $limits[$pairLimits[0]['id']]['sl']['amount'] = ($limits[$pairLimits[0]['id']]['tp']['ticks'] + 20) * $limits[$pairLimits[0]['id']]['sl']['lots'];
+
+                $limits[$pairLimits[0]['id']]['tp']['lots'] = (float) $limits[$pairLimits[0]['id']]['tp']['amount'] / ($limits[$pairLimits[0]['id']]['tp']['ticks'] * 10);
+                $limits[$pairLimits[0]['id']]['tp']['ticks'] = (float) $limits[$pairLimits[0]['id']]['tp']['ticks'] * 10;
+
+                $limits[$pairLimits[0]['id']]['sl']['lots'] = $limits[$pairLimits[0]['id']]['tp']['lots'];
+                $limits[$pairLimits[0]['id']]['sl']['ticks'] = (float) $limits[$pairLimits[0]['id']]['sl']['ticks'] * 10;
+
+//                $limits[$pairLimits[0]['id']]['sl']['ticks'] = $limits[$pairLimits[0]['id']]['tp']['ticks'] + 20;
+//                $limits[$pairLimits[0]['id']]['sl']['amount'] = ($limits[$pairLimits[0]['id']]['tp']['ticks'] + 20) * $limits[$pairLimits[0]['id']]['sl']['lots'];
+            } else {
+                $limits[$pairLimits[0]['id']] = [
+                    'tp' => $newTp,
+                    'sl' => $this->convertUnitsToLots($limits[$pairLimits[0]['id']]['sl'], $lotsEquityBracket, $generatedLots)
+                ];
             }
         }
 
         if ($itemIds[1]['trading_account_credential']['package']['asset_type'] === 'forex') {
-            $newTp = $this->convertUnitsToLots($limits[$pairLimits[1]['id']]['tp'], $itemIds[1]['latest_equity'], $generatedLots);
+
+            $newTp = $this->convertUnitsToLots($limits[$pairLimits[1]['id']]['tp'], $lotsEquityBracket, $generatedLots);
             $generatedLots = ($generatedLots)? $generatedLots : $newTp['lots'];
-            $limits[$pairLimits[1]['id']] = [
-                'tp' => $newTp,
-                'sl' => $this->convertUnitsToLots($limits[$pairLimits[1]['id']]['sl'], $itemIds[1]['latest_equity'], $generatedLots)
-            ];
+
+
 
             if ($itemIds[0]['trading_account_credential']['package']['asset_type'] === 'futures') {
-                $limits[$pairLimits[1]['id']]['sl']['ticks'] = $limits[$pairLimits[1]['id']]['tp']['ticks'] + 20;
-                $limits[$pairLimits[1]['id']]['sl']['amount'] = ($limits[$pairLimits[1]['id']]['tp']['ticks'] + 20) * $limits[$pairLimits[0]['id']]['sl']['lots'];
+
+                $limits[$pairLimits[1]['id']]['tp']['lots'] = (float) $limits[$pairLimits[1]['id']]['tp']['amount'] / ($limits[$pairLimits[1]['id']]['tp']['ticks'] * 10);
+                $limits[$pairLimits[1]['id']]['tp']['ticks'] = (float) $limits[$pairLimits[1]['id']]['tp']['ticks'] * 10;
+
+                $limits[$pairLimits[1]['id']]['sl']['lots'] = $limits[$pairLimits[1]['id']]['tp']['lots'];
+                $limits[$pairLimits[1]['id']]['sl']['ticks'] = (float) $limits[$pairLimits[1]['id']]['sl']['ticks'] * 10;
+
+//                $limits[$pairLimits[1]['id']]['sl']['ticks'] = $limits[$pairLimits[1]['id']]['tp']['ticks'] + 20;
+//                $limits[$pairLimits[1]['id']]['sl']['amount'] = ($limits[$pairLimits[1]['id']]['tp']['ticks'] + 20) * $limits[$pairLimits[0]['id']]['sl']['lots'];
+            } else {
+                $limits[$pairLimits[1]['id']] = [
+                    'tp' => $newTp,
+                    'sl' => $this->convertUnitsToLots($limits[$pairLimits[1]['id']]['sl'], $lotsEquityBracket, $generatedLots)
+                ];
             }
         }
 
         if ($itemIds[0]['trading_account_credential']['package']['asset_type'] === 'forex' &&
             $itemIds[1]['trading_account_credential']['package']['asset_type'] === 'forex') {
 
-            $lots = $limits[$pairLimits[0]['id']]['tp']['lots'];
-
+            $lots = $limits[$pairLimits[1]['id']]['tp']['lots'];
             $item1Tp = $limits[$pairLimits[0]['id']]['tp']['ticks'];
             $item1Sl = $item1Tp + 30;
 

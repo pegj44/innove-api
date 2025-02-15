@@ -101,6 +101,14 @@ class TradeReportController extends Controller
             $items->whereIn('trade_account_credential_id', $data['tradingAccountIds']);
         }
 
+        if ($request->get('ids')) {
+            $items->whereIn('id', $data['ids']);
+        }
+
+        if ($request->get('raw')) {
+            return $items->get();
+        }
+
         return response()->json($items->get());
     }
 
