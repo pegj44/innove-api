@@ -138,7 +138,8 @@ class PairLimitsController extends Controller
             $limits[$item['id']] = [
                 'id' => $item['id'],
                 'tp' => $tp,
-                'sl' => $sl
+                'sl' => $sl,
+                'phase' => $item['trading_account_credential']['package']['current_phase']
             ];
 
             $lowestItems = [$sl, $tp];
@@ -217,6 +218,20 @@ class PairLimitsController extends Controller
         ];
     }
 
+    public function calculateFproCrossPhaseLimits($itemIds, $pairLimits, $limits)
+    {
+        foreach ($limits as $id => $limit) {
+            if ($limit['phase'] === 'phase-3') {
+                $lots = (float) $limit['tp']['lots'] / 4;
+                $lots = number_format($lots, 2, '.', '');
+                $limits[$id]['tp']['lots'] = (float) $lots;
+                $limits[$id]['sl']['lots'] = (float) $lots;
+            }
+        }
+
+        return $limits;
+    }
+
     public function getLimits()
     {
         $pairLimits = $this->getItemsLowestTpSl($this->items);
@@ -248,7 +263,8 @@ class PairLimitsController extends Controller
                     'lots' => $calcSl['lots'],
                     'amount' => ($calcSl['ticks'] - 1) * $calcSl['lots']
                 ],
-                'sl' => $calcSl
+                'sl' => $calcSl,
+                'phase' => $pairLimits[0]['phase']
             ];
 
             $projectedSl2 = ($calcSl['ticks'] + 1) * $calcSl['lots'] + $calcSl['charge'];
@@ -263,7 +279,8 @@ class PairLimitsController extends Controller
                     'ticks' => ($pairLimits[1]['sl'] >= $projectedSl2)? $calcSl['ticks'] + 1 : $calcSl['ticks'],
                     'lots' => $calcSl['lots'],
                     'amount' =>  ($pairLimits[1]['sl'] >= $projectedSl2)? ($calcSl['ticks'] + 1) * $calcSl['lots'] : $calcSl['ticks'] * $calcSl['lots']
-                ]
+                ],
+                'phase' => $pairLimits[1]['phase']
             ];
 
         } else { // TP based
@@ -277,6 +294,7 @@ class PairLimitsController extends Controller
                     'lots' => $calcTp['lots'],
                     'amount' => ($calcTp['ticks'] + 1) * $calcTp['lots']
                 ],
+                'phase' => $pairLimits[0]['phase']
             ];
 
             $projectedSl2 = ($calcTp['ticks'] + 2) * $calcTp['lots'] + $calcTp['charge'];
@@ -291,13 +309,20 @@ class PairLimitsController extends Controller
                     'ticks' => ($pairLimits[1]['sl'] >= $projectedSl2)? $calcTp['ticks'] + 2 : $calcTp['ticks'],
                     'lots' => $calcTp['lots'],
                     'amount' =>  ($pairLimits[1]['sl'] >= $projectedSl2)? ($calcTp['ticks'] + 2) * $calcTp['lots'] : $calcTp['ticks'] * $calcTp['lots']
-                ]
+                ],
+                'phase' => $pairLimits[1]['phase']
             ];
         }
 
         $limits = $this->equalizeTpSL($itemIds, $pairLimits, $limits);
         $limits = $this->convertForexTpSl($itemIds, $pairLimits, $limits);
         $limits = $this->scaleDownFunderPro($itemIds, $pairLimits, $limits);
+
+        if (($this->items[0]['trading_account_credential']['package']['funder']['alias'] === 'FPRO' &&
+            $this->items[1]['trading_account_credential']['package']['funder']['alias'] === 'FPRO') &&
+            $this->items[0]['trading_account_credential']['package']['current_phase'] !== $this->items[1]['trading_account_credential']['package']['current_phase']) {
+            return $this->calculateFproCrossPhaseLimits($itemIds, $pairLimits, $limits);
+        }
 
         return $limits;
     }
@@ -311,7 +336,7 @@ class PairLimitsController extends Controller
 
         $hasFpro = $this->hasSpecificCrossFunder($funders, 'fpro');
 
-        if (!$hasFpro) {
+        if ($hasFpro === false) {
             return $limits;
         }
 
@@ -424,10 +449,8 @@ class PairLimitsController extends Controller
 //                $limits[$pairLimits[0]['id']]['sl']['ticks'] = $limits[$pairLimits[0]['id']]['tp']['ticks'] + 20;
 //                $limits[$pairLimits[0]['id']]['sl']['amount'] = ($limits[$pairLimits[0]['id']]['tp']['ticks'] + 20) * $limits[$pairLimits[0]['id']]['sl']['lots'];
             } else {
-                $limits[$pairLimits[0]['id']] = [
-                    'tp' => $newTp,
-                    'sl' => $this->convertUnitsToLots($limits[$pairLimits[0]['id']]['sl'], $lotsEquityBracket, $generatedLots)
-                ];
+                $limits[$pairLimits[0]['id']]['tp'] = $newTp;
+                $limits[$pairLimits[0]['id']]['sl'] = $this->convertUnitsToLots($limits[$pairLimits[0]['id']]['sl'], $lotsEquityBracket, $generatedLots);
             }
         }
 
@@ -449,10 +472,8 @@ class PairLimitsController extends Controller
 //                $limits[$pairLimits[1]['id']]['sl']['ticks'] = $limits[$pairLimits[1]['id']]['tp']['ticks'] + 20;
 //                $limits[$pairLimits[1]['id']]['sl']['amount'] = ($limits[$pairLimits[1]['id']]['tp']['ticks'] + 20) * $limits[$pairLimits[0]['id']]['sl']['lots'];
             } else {
-                $limits[$pairLimits[1]['id']] = [
-                    'tp' => $newTp,
-                    'sl' => $this->convertUnitsToLots($limits[$pairLimits[1]['id']]['sl'], $lotsEquityBracket, $generatedLots)
-                ];
+                $limits[$pairLimits[1]['id']]['tp'] = $newTp;
+                $limits[$pairLimits[1]['id']]['sl'] = $this->convertUnitsToLots($limits[$pairLimits[1]['id']]['sl'], $lotsEquityBracket, $generatedLots);
             }
         }
 
