@@ -44,37 +44,13 @@ class PairLimitsController extends Controller
 
     public function getBestOrderAmountTicksRatio($targetAmount)
     {
-//        if (!$lots) {
-            $targetAmount = (float) $targetAmount;
-            $minSl = 65;
-            $maxSl = 75;
-            $closestToTarget = 0;
-            $finalOrderAmnt = 0;
-            $finalTicks = 0;
+        $targetAmount = (float) $targetAmount;
+        $minSl = 65;
+        $maxSl = 75;
 
-//            while ($minSl <= $maxSl) {
-//                $divide = floor($targetAmount) / $minSl;
-//                $orderAmnt = floor($divide);
-//                $projectedSl = $orderAmnt * $minSl;
-//
-//                if ($projectedSl > $closestToTarget) {
-//                    $closestToTarget = $projectedSl;
-//                    $finalOrderAmnt = $orderAmnt;
-//                    $finalTicks = $minSl;
-//                }
-//                $minSl++;
-//            }
-
-            $finalTicks = rand($minSl, $maxSl);
-            $divide = floor($targetAmount) / $finalTicks;
-            $finalOrderAmnt = floor($divide);
-
-
-
-//        } else {
-//            $finalTicks = floor($targetAmount / $lots);
-//            $finalOrderAmnt = $lots;
-//        }
+        $finalTicks = rand($minSl, $maxSl);
+        $divide = floor($targetAmount) / $finalTicks;
+        $finalOrderAmnt = floor($divide);
 
         return [
             'ticks' => $finalTicks,
@@ -139,6 +115,7 @@ class PairLimitsController extends Controller
                 'id' => $item['id'],
                 'tp' => $tp,
                 'sl' => $sl,
+                'starting_bal' => (float) $item['trading_account_credential']['package']['starting_balance'],
                 'phase' => $item['trading_account_credential']['package']['current_phase']
             ];
 
@@ -155,37 +132,6 @@ class PairLimitsController extends Controller
 
         return $sortedLimits;
     }
-//
-//    public function getPairTpSl($tp, $sl, $lots = 0)
-//    {
-//        if ($tp > $sl) {
-//            $baseAmnt = $this->getBestOrderAmountTicksRatio($sl, $lots);
-//            $baseAmnt = $this->getBestOrderAmountTicksRatio($baseAmnt['amount'] - $baseAmnt['charge'], $lots);
-//        } else {
-//            $baseAmnt = $this->getBestOrderAmountTicksRatio($tp, $lots);
-//        }
-//
-//        !d($baseAmnt);
-//
-////        $tpLotsTicks = $this->getBestOrderAmountTicksRatio($tp, $lots);
-////        $slLotsTicks = $this->getMatchingSlTicksDiff($sl, $tpLotsTicks['ticks'], $tpLotsTicks['lots'], $tpLotsTicks['charge']);
-////
-////        if ($tpLotsTicks['amount'] >= $slLotsTicks['amount'] || $tp > $sl) {
-////            $slLotsTicks = $this->getBestOrderAmountTicksRatio($sl, $lots);
-////            !d($slLotsTicks);
-////            $slLotsTicks = $this->getBestOrderAmountTicksRatio($slLotsTicks['amount'] - $slLotsTicks['charge'], $lots);
-////            $tpLotsTicks = [
-////                'amount' => ($slLotsTicks['ticks'] - 2) * $slLotsTicks['lots'],
-////                'ticks' => $slLotsTicks['ticks'] - 2,
-////                'lots' => $slLotsTicks['lots']
-////            ];
-////        }
-////
-////        return [
-////            'tp' => $tpLotsTicks,
-////            'sl' => $slLotsTicks
-////        ];
-//    }
 
     public function randomFloat($min, $max)
     {
@@ -196,7 +142,7 @@ class PairLimitsController extends Controller
         return $randomScaled / 10; // Scale back to float with one decimal place
     }
 
-    public function convertUnitsToLots($values, $equity, $lots = 0)
+    public function convertUnitsToLots($amount, $equity, $lots = 0)
     {
         $minLots = 1.3;
         $maxLots = 1.5;
@@ -209,7 +155,7 @@ class PairLimitsController extends Controller
         if (!$lots) {
             $lots = $this->randomFloat($minLots, $maxLots);
         }
-        $ticks = floor($values['amount'] / $lots);
+        $ticks = floor($amount / $lots);
 
         return [
             'ticks' => $ticks,
@@ -218,23 +164,91 @@ class PairLimitsController extends Controller
         ];
     }
 
-    public function calculateFproCrossPhaseLimits($itemIds, $pairLimits, $limits)
+    public function calculateFproCrossPhaseLimits($pairLimits)
     {
-        foreach ($limits as $id => $limit) {
+        $stopLossAllowance = 25;
+        $phase2MinAmnt = 0;
+        $phase3MinAmnt = 0;
+        $phase2Id = 0;
+        $phase3Id = 0;
+        $equities = [];
+
+        foreach ($pairLimits as $limit) {
+            $stopLoss = (float) $limit['sl'];
+            $equities[] = $limit['starting_bal'];
+
+            if ($limit['phase'] === 'phase-2') {
+
+                $phase2Id = $limit['id'];
+                $phase2MinAmnt = min($limit['tp'], $stopLoss);
+            }
+
             if ($limit['phase'] === 'phase-3') {
-                $lots = (float) $limit['tp']['lots'] / 4;
-                $lots = number_format($lots, 2, '.', '');
-                $limits[$id]['tp']['lots'] = (float) $lots;
-                $limits[$id]['sl']['lots'] = (float) $lots;
+                $phase3Id = $limit['id'];
+                $phase3MinAmnt = min($limit['tp'], $stopLoss);
             }
         }
 
-        return $limits;
+        /**
+         * Phase-3 vs Phase2 Ratio
+         */
+        if ($phase2Id && $phase3Id) {
+            $maxNum = $phase3MinAmnt * 4;
+            if ($maxNum > $phase2MinAmnt) {
+                $maxNum = $phase2MinAmnt;
+            }
+
+            $baseLimits = $this->getBestOrderAmountTicksRatio($maxNum);
+            $baseLimits = $this->convertUnitsToLots($baseLimits['amount'], min($equities));
+
+            $slTicks = (float) $baseLimits['ticks'];
+            $tpTicks = $slTicks - 20;
+            $lots = (float) $baseLimits['lots'];
+            $phase3Lots = $lots / 4;
+            $phase3Lots = number_format($phase3Lots, 2);
+
+            return [
+                $phase2Id => [
+                    'tp' => [
+                        'ticks' => $tpTicks,
+                        'lots' => $lots,
+                        'amount' => $tpTicks * $lots
+                    ],
+                    'sl' => [
+                        'ticks' => $slTicks,
+                        'lots' => $lots,
+                        'amount' => $slTicks * $lots
+                    ],
+                    'phase' => 'phase-2'
+                ],
+                $phase3Id => [
+                    'tp' => [
+                        'ticks' => $tpTicks,
+                        'lots' => $phase3Lots,
+                        'amount' => $tpTicks * $phase3Lots
+                    ],
+                    'sl' => [
+                        'ticks' => $slTicks,
+                        'lots' => $phase3Lots,
+                        'amount' => $slTicks * $phase3Lots
+                    ],
+                    'phase' => 'phase-3'
+                ]
+            ];
+        }
+
+        return [];
     }
 
     public function getLimits()
     {
         $pairLimits = $this->getItemsLowestTpSl($this->items);
+
+        if (($this->items[0]['trading_account_credential']['package']['funder']['alias'] === 'FPRO' &&
+            $this->items[1]['trading_account_credential']['package']['funder']['alias'] === 'FPRO') &&
+            $this->items[0]['trading_account_credential']['package']['current_phase'] !== $this->items[1]['trading_account_credential']['package']['current_phase']) {
+            return $this->calculateFproCrossPhaseLimits($pairLimits);
+        }
 
         $itemIds = [];
 
@@ -255,8 +269,7 @@ class PairLimitsController extends Controller
 
         if ($tp > $sl) { // SL based
             $calcSl = $this->getBestOrderAmountTicksRatio($sl);
-//            $calcSl = $this->getBestOrderAmountTicksRatio($calcSl['amount'] - $calcSl['charge']);
-//!d($calcSl);
+
             $limits[$pairLimits[0]['id']] = [
                 'tp' => [
                     'ticks' => $calcSl['ticks'] - 1,
@@ -285,7 +298,6 @@ class PairLimitsController extends Controller
 
         } else { // TP based
             $calcTp = $this->getBestOrderAmountTicksRatio($tp);
-//            $calcTp = $this->getBestOrderAmountTicksRatio($calcTp['amount'] - $calcTp['charge']);
 
             $limits[$pairLimits[0]['id']] = [
                 'tp' => $calcTp,
@@ -317,12 +329,6 @@ class PairLimitsController extends Controller
         $limits = $this->equalizeTpSL($itemIds, $pairLimits, $limits);
         $limits = $this->convertForexTpSl($itemIds, $pairLimits, $limits);
         $limits = $this->scaleDownFunderPro($itemIds, $pairLimits, $limits);
-
-        if (($this->items[0]['trading_account_credential']['package']['funder']['alias'] === 'FPRO' &&
-            $this->items[1]['trading_account_credential']['package']['funder']['alias'] === 'FPRO') &&
-            $this->items[0]['trading_account_credential']['package']['current_phase'] !== $this->items[1]['trading_account_credential']['package']['current_phase']) {
-            return $this->calculateFproCrossPhaseLimits($itemIds, $pairLimits, $limits);
-        }
 
         return $limits;
     }
@@ -419,24 +425,9 @@ class PairLimitsController extends Controller
             $lotsEquityBracket = min([$startingBal1, $startingBal2]);
         }
 
-//        info(print_r([
-//            'convertForexTpSl' => [
-//                'item1' => [
-//                    'tp' => $limits[$pairLimits[0]['id']]['tp'],
-//                    'sl' => $limits[$pairLimits[0]['id']]['sl']
-//                ],
-//                'item2' => [
-//                    'tp' => $limits[$pairLimits[1]['id']]['tp'],
-//                    'sl' => $limits[$pairLimits[1]['id']]['sl']
-//                ]
-//            ]
-//        ], true));
-
         if ($itemIds[0]['trading_account_credential']['package']['asset_type'] === 'forex') {
-            $newTp = $this->convertUnitsToLots($limits[$pairLimits[0]['id']]['tp'], $lotsEquityBracket);
+            $newTp = $this->convertUnitsToLots($limits[$pairLimits[0]['id']]['tp']['amount'], $lotsEquityBracket);
             $generatedLots = $newTp['lots'];
-
-
 
             if ($itemIds[1]['trading_account_credential']['package']['asset_type'] === 'futures') {
 
@@ -445,21 +436,16 @@ class PairLimitsController extends Controller
 
                 $limits[$pairLimits[0]['id']]['sl']['lots'] = $limits[$pairLimits[0]['id']]['tp']['lots'];
                 $limits[$pairLimits[0]['id']]['sl']['ticks'] = (float) $limits[$pairLimits[0]['id']]['sl']['ticks'] * 10;
-
-//                $limits[$pairLimits[0]['id']]['sl']['ticks'] = $limits[$pairLimits[0]['id']]['tp']['ticks'] + 20;
-//                $limits[$pairLimits[0]['id']]['sl']['amount'] = ($limits[$pairLimits[0]['id']]['tp']['ticks'] + 20) * $limits[$pairLimits[0]['id']]['sl']['lots'];
             } else {
                 $limits[$pairLimits[0]['id']]['tp'] = $newTp;
-                $limits[$pairLimits[0]['id']]['sl'] = $this->convertUnitsToLots($limits[$pairLimits[0]['id']]['sl'], $lotsEquityBracket, $generatedLots);
+                $limits[$pairLimits[0]['id']]['sl'] = $this->convertUnitsToLots($limits[$pairLimits[0]['id']]['sl']['amount'], $lotsEquityBracket, $generatedLots);
             }
         }
 
         if ($itemIds[1]['trading_account_credential']['package']['asset_type'] === 'forex') {
 
-            $newTp = $this->convertUnitsToLots($limits[$pairLimits[1]['id']]['tp'], $lotsEquityBracket, $generatedLots);
+            $newTp = $this->convertUnitsToLots($limits[$pairLimits[1]['id']]['tp']['amount'], $lotsEquityBracket, $generatedLots);
             $generatedLots = ($generatedLots)? $generatedLots : $newTp['lots'];
-
-
 
             if ($itemIds[0]['trading_account_credential']['package']['asset_type'] === 'futures') {
 
@@ -468,12 +454,9 @@ class PairLimitsController extends Controller
 
                 $limits[$pairLimits[1]['id']]['sl']['lots'] = $limits[$pairLimits[1]['id']]['tp']['lots'];
                 $limits[$pairLimits[1]['id']]['sl']['ticks'] = (float) $limits[$pairLimits[1]['id']]['sl']['ticks'] * 10;
-
-//                $limits[$pairLimits[1]['id']]['sl']['ticks'] = $limits[$pairLimits[1]['id']]['tp']['ticks'] + 20;
-//                $limits[$pairLimits[1]['id']]['sl']['amount'] = ($limits[$pairLimits[1]['id']]['tp']['ticks'] + 20) * $limits[$pairLimits[0]['id']]['sl']['lots'];
             } else {
                 $limits[$pairLimits[1]['id']]['tp'] = $newTp;
-                $limits[$pairLimits[1]['id']]['sl'] = $this->convertUnitsToLots($limits[$pairLimits[1]['id']]['sl'], $lotsEquityBracket, $generatedLots);
+                $limits[$pairLimits[1]['id']]['sl'] = $this->convertUnitsToLots($limits[$pairLimits[1]['id']]['sl']['amount'], $lotsEquityBracket, $generatedLots);
             }
         }
 

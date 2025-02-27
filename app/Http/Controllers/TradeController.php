@@ -874,7 +874,7 @@ class TradeController extends Controller
 //            'raw' => true
 //        ]));
 
-//        WebPush::dispatch(auth()->user()->account_id, ['ids' => array_keys($data)], 'pair-units');
+        WebPush::dispatch(auth()->user()->account_id, ['ids' => array_keys($data)], 'pair-units');
 
 
         return response()->json([
