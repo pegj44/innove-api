@@ -98,7 +98,8 @@ class TradeHistoryController extends Controller
         $phase = ($request->get('current_phase')) ? $data['current_phase'] : null;
 
         $items = TradeReport::with(['tradingAccountCredential.historyV3', 'tradingAccountCredential.funder'])
-            ->where('status', '<>', 'breached')
+//            ->where('status', '<>', 'breached')
+            ->whereNotIn('status', ['breached', 'breachedcheck'])
             ->where('account_id', auth()->user()->account_id);
 
         if ($phase) {

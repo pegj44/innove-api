@@ -417,7 +417,7 @@ class TradeController extends Controller
         $rdd = self::getCalculatedRdd($tradeAccount);
 
         if ($rdd !== null && $rdd <= 100) {
-            return 'breached';
+            return 'breachedcheck';
         }
 
         if ($pnl > 0) {
@@ -863,22 +863,12 @@ class TradeController extends Controller
 //        $dispatchCommand = false;
 
         foreach ($data as $itemId => $item) {
-//            $isProcessRecorded = $this->recordUnitProcess($item, $tradeQueue->id, 'initiate-trade');
             $this->initiateUnitTrade($itemId, $item, $queueId, $tradeQueue->id, $status, $dispatchCommand);
         }
 
-
-//        $tradeReport = new TradeReportController();
-//        $items = $tradeReport->getReports(new Request([
-//            'ids' => array_keys($data),
-//            'raw' => true
-//        ]));
-
         WebPush::dispatch(auth()->user()->account_id, ['ids' => array_keys($data)], 'pair-units');
 
-
         return response()->json([
-//            'items' => $items,
             'message' => __('Account pairing initiated.')
         ]);
     }

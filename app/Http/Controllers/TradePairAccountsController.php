@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\UnitResponse;
 use App\Events\UnitsEvent;
+use App\Events\WebPush;
 use App\Models\AccountsPairingJob;
 use App\Models\FundersMetadata;
 use App\Models\PairedItems;
@@ -59,43 +60,69 @@ class TradePairAccountsController extends Controller
 
     public function removePair(Request $request, string $id)
     {
-        $queue = TradeQueueModel::where('id', $id)->first();
-        $pairItems = maybe_unserialize($queue->data);
-        $pairItemIds = array_keys($pairItems);
+        try {
+            $queue = TradeQueueModel::where('id', $id)->first();
 
-        foreach ($pairItemIds as $pairItemId) {
-            $item = TradeReport::where('id', $pairItemId)->first();
-            $item->status = 'idle';
-            $item->update();
-        }
-
-        $type = $request->get('type');
-
-        if ($type === 'close') {
-            $queue->status = 'closed';
-            $queue->update();
-        }
-
-        if ($type === 'cancel') {
-            $currentDateTime = Carbon::now('Asia/Manila');
-
-            foreach ($pairItems as $itemId => $pairItem) {
-                UnitsEvent::dispatch(getUnitAuthId(), [
-                    'queue_id' => $queue->id,
-                    'itemId' => $itemId,
-                    'type' => $type,
-                    'dateTime' => $currentDateTime->format('F j, Y g:i A'),
-                    'funder' => [
-                        'alias' => $pairItem['funder'],
-                        'theme' => $pairItem['funder_theme']
-                    ],
-                ], 'cancel-pairing', $pairItem['platform_type'], $pairItem['unit_id']);
+            if (!$queue) {
+                return response()->json([
+                   'error' => __('Pair queue not found.')
+                ]);
             }
 
-            $queue->delete();
+            $pairItems = maybe_unserialize($queue->data);
+            $pairItemIds = array_keys($pairItems);
+
+            foreach ($pairItemIds as $pairItemId) {
+                $item = TradeReport::where('id', $pairItemId)->first();
+                $item->status = 'idle';
+                $item->update();
+            }
+
+            $type = $request->get('type');
+
+            if ($type === 'close') {
+                $queue->status = 'closed';
+                $queue->update();
+            }
+
+            if ($type === 'cancel') {
+                $currentDateTime = Carbon::now('Asia/Manila');
+
+                foreach ($pairItems as $itemId => $pairItem) {
+                    UnitsEvent::dispatch(getUnitAuthId(), [
+                        'queue_id' => $queue->id,
+                        'itemId' => $itemId,
+                        'type' => $type,
+                        'dateTime' => $currentDateTime->format('F j, Y g:i A'),
+                        'funder' => [
+                            'alias' => $pairItem['funder'],
+                            'theme' => $pairItem['funder_theme']
+                        ],
+                    ], 'cancel-pairing', $pairItem['platform_type'], $pairItem['unit_id']);
+                }
+
+                $queue->delete();
+            }
+
+            sleep(10);
+
+            WebPush::dispatch(auth()->user()->account_id, [
+                'id' => $id,
+                'ids' => $pairItemIds
+            ], 'cancel-pairing');
+
+            return response()->json(['id' => $id]);
+        } catch (\Exception $e) {
+
+            info(print_r([
+                'removePair_error' => $e->getMessage()
+            ], true));
+
+            return response()->json([
+                'error' => __('Error removing the pair.')
+            ]);
         }
 
-        return response()->json(['id' => $id]);
     }
 
     public function pairAccounts(Request $request)
