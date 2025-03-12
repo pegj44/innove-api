@@ -165,6 +165,28 @@ class PairLimitsController extends Controller
         ];
     }
 
+//    public function convertUnitsToLots($amount, $equity, $lots = 0)
+//    {
+//        $minLots = 1.3;
+//        $maxLots = 1.5;
+//
+//        if ($equity > 50000) {
+//            $minLots = 2.3;
+//            $maxLots = 2.5;
+//        }
+//
+//        if (!$lots) {
+//            $lots = $this->randomFloat($minLots, $maxLots);
+//        }
+//        $ticks = floor($amount / $lots);
+//
+//        return [
+//            'ticks' => $ticks,
+//            'lots' => $lots,
+//            'amount' => $ticks * $lots
+//        ];
+//    }
+
     public function scaleDownFunderPro($itemIds, $pairLimits, $limits)
     {
         $ratio = $this->getFunderRatio($itemIds);
@@ -597,6 +619,14 @@ class PairLimitsController extends Controller
 
         if ($itemIds[0]['trading_account_credential']['package']['asset_type'] === 'forex' &&
             $itemIds[1]['trading_account_credential']['package']['asset_type'] === 'forex') {
+
+//            $item1Tp = $this->convertUnitsToLots($limits[$pairLimits[0]['id']]['tp']['amount'], $lotsEquityBracket);
+//            $generatedLots = $item1Tp['lots'];
+//
+//            $limits[$pairLimits[0]['id']]['tp'] = $item1Tp;
+//            $limits[$pairLimits[0]['id']]['sl'] = $this->convertUnitsToLots($limits[$pairLimits[0]['id']]['sl']['amount'], $lotsEquityBracket, $generatedLots);
+//            $limits[$pairLimits[1]['id']]['tp'] = $this->convertUnitsToLots($limits[$pairLimits[1]['id']]['tp']['amount'], $lotsEquityBracket, $generatedLots);
+//            $limits[$pairLimits[1]['id']]['sl'] = $this->convertUnitsToLots($limits[$pairLimits[1]['id']]['sl']['amount'], $lotsEquityBracket, $generatedLots);
 
             $lots = $limits[$pairLimits[1]['id']]['tp']['lots'];
             $item1Tp = $limits[$pairLimits[0]['id']]['tp']['ticks'];

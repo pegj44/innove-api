@@ -369,25 +369,25 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
     Route::post('dev', function(Request $request)
     {
 
-        $items = TradeReport::with(
-            'tradingAccountCredential.userAccount.tradingUnit',
-            'tradingAccountCredential.package',
-            'tradingAccountCredential.package.funder',
-            'tradingAccountCredential.funder.metadata',
-            'tradingAccountCredential.userAccount.funderAccountCredential',
-            'tradingAccountCredential.historyV3',
-            'tradingAccountCredential.payouts'
-        )
-            ->where('account_id', auth()->user()->account_id)
-            ->whereHas('tradingAccountCredential', function($query) {
-                $query->where('status', 'active');
-            });
-
-        if ($request->get('ids')) {
-            $items->whereIn('id', [149,192]);
-        }
-
-        dd($items->get());
+//        $items = TradeReport::with(
+//            'tradingAccountCredential.userAccount.tradingUnit',
+//            'tradingAccountCredential.package',
+//            'tradingAccountCredential.package.funder',
+//            'tradingAccountCredential.funder.metadata',
+//            'tradingAccountCredential.userAccount.funderAccountCredential',
+//            'tradingAccountCredential.historyV3',
+//            'tradingAccountCredential.payouts'
+//        )
+//            ->where('account_id', auth()->user()->account_id)
+//            ->whereHas('tradingAccountCredential', function($query) {
+//                $query->where('status', 'active');
+//            });
+//
+//        if ($request->get('ids')) {
+//            $items->whereIn('id', [149,192]);
+//        }
+//
+//        dd($items->get());
 
 
 //        UnitsEvent::dispatch(getUnitAuthId(), [
@@ -397,7 +397,7 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 ////            'initiate-trade'
 ////            'do-trade'
 //            , 'CTrader_3', '47A323B6');
-        die();
+//        die();
 
 //        $tradeAccount = TradeReport::with(['tradingAccountCredential', 'tradingAccountCredential.historyV3', 'tradingAccountCredential.package', 'tradingAccountCredential.package.funder'])
 //            ->where('account_id', auth()->user()->account_id)
@@ -410,7 +410,7 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 //        !d($tradeAccountPackageData->getAssetType());
 //        !d($tradeAccount->toArray());
 
-        die();
+//        die();
 
 
 //
@@ -442,7 +442,7 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 //                }
 //            });
 
-        !d($tradingHistoryArr);
+//        !d($tradingHistoryArr);
 //        echo '<pre>';
 //
 //        var_dump($tradingHistoryArr);
@@ -450,7 +450,7 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 //        echo '</pre>';
 //        TradeHistoryV3Model::insert($tradingHistoryArr);
 
-        die();
+//        die();
 //
 //        $currentPhase = str_replace('phase-', '', $tradeAccount['trading_account_credential']['current_phase']);
 //        $highestBalArr = [];
@@ -490,7 +490,7 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 //        return 'N/A';
 
 //!d($tradeAccount);
-die();
+//die();
 
 //        $allRecord = TradeHistoryV2Model::where('trade_account_credential_id', $tradeAccount->trade_account_credential_id)
 //            ->get();
@@ -509,12 +509,12 @@ die();
 //        $Rdd = (float) $tradeAccount->latest_equity - $maxThreshold;
 
 
-
-        !d($maxThreshold);
-        !d($Rdd);
-
-
-        die();
+//
+//        !d($maxThreshold);
+//        !d($Rdd);
+//
+//
+//        die();
 
 
 
@@ -534,7 +534,7 @@ die();
 //            ->get();
 //
 //        !d($prevDayRecord);
-        die();
+//        die();
 
 
 
@@ -595,27 +595,27 @@ die();
 
 // Change password
 
-//        $email = 'odrokie@gmail.com';
-//        $newPassword = 'newpasss';
-//
-//        // Find the user by email
-//        $user = User::where('email', $email)->first();
-//
-//        if (!$user) {
-//            $this->error('User not found!');
-//            return 1;
-//        }
-//
-//        // Update the user's password
-//        $user->password = Hash::make($newPassword);
-//        $user->save();
-//
-//        // Display a success message
-//        var_dump('Password has been successfully updated for user: ' . $email);
-//
-//        die();
+        $email = 'admin_aitrade@disruptorai.com';
+        $newPassword = 'aiJM41!!3';
 
-//        return response()->json(['test2' => 3]);
+        // Find the user by email
+        $user = User::where('email', $email)->first();
+
+        if (!$user) {
+            $this->error('User not found!');
+            return 1;
+        }
+
+        // Update the user's password
+        $user->password = Hash::make($newPassword);
+        $user->save();
+
+        // Display a success message
+        var_dump('Password has been successfully updated for user: ' . $email);
+
+        die();
+
+        return response()->json(['test2' => 3]);
     });
 });
 
