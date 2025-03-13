@@ -353,9 +353,24 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 });
 
 Route::post('/aw-snap', function(Request $request) {
-    info(print_r([
-        'aw-snap3' => $request->all()
-    ], true));
+
+    $items = TradeReport::with(
+        'tradingAccountCredential.userAccount.tradingUnit',
+        'tradingAccountCredential.package',
+        'tradingAccountCredential.package.funder',
+        'tradingAccountCredential.funder.metadata',
+        'tradingAccountCredential.userAccount.funderAccountCredential',
+        'tradingAccountCredential.historyV3',
+        'tradingAccountCredential.payouts'
+    )
+        ->whereHas('tradingAccountCredential', function($query) {
+            $query->where('status', 'active');
+        })
+        ->limit(10)
+        ->get();
+
+    dd($items);
+
 })->middleware('guest')->name('aw-snap');
 
 
@@ -369,25 +384,21 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
     Route::post('dev', function(Request $request)
     {
 
-//        $items = TradeReport::with(
-//            'tradingAccountCredential.userAccount.tradingUnit',
-//            'tradingAccountCredential.package',
-//            'tradingAccountCredential.package.funder',
-//            'tradingAccountCredential.funder.metadata',
-//            'tradingAccountCredential.userAccount.funderAccountCredential',
-//            'tradingAccountCredential.historyV3',
-//            'tradingAccountCredential.payouts'
-//        )
-//            ->where('account_id', auth()->user()->account_id)
-//            ->whereHas('tradingAccountCredential', function($query) {
-//                $query->where('status', 'active');
-//            });
-//
-//        if ($request->get('ids')) {
-//            $items->whereIn('id', [149,192]);
-//        }
-//
-//        dd($items->get());
+        $items = TradeReport::with(
+            'tradingAccountCredential.userAccount.tradingUnit',
+            'tradingAccountCredential.package',
+            'tradingAccountCredential.package.funder',
+            'tradingAccountCredential.funder.metadata',
+            'tradingAccountCredential.userAccount.funderAccountCredential',
+            'tradingAccountCredential.historyV3',
+            'tradingAccountCredential.payouts'
+        )
+            ->where('account_id', auth()->user()->account_id)
+            ->whereHas('tradingAccountCredential', function($query) {
+                $query->where('status', 'active');
+            });
+
+        dd($items->get());
 
 
 //        UnitsEvent::dispatch(getUnitAuthId(), [

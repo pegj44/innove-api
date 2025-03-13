@@ -145,18 +145,33 @@ class PairLimitsController extends Controller
 
     public function convertUnitsToLots($amount, $equity, $lots = 0)
     {
+//        info(print_r([
+//            'convertUnitsToLots' => [
+//                'amount' => $amount,
+//                'equity' => $equity,
+//                'lots' => $lots
+//            ]
+//        ], true));
+
         $minLots = 1.3;
         $maxLots = 1.5;
+        $minVal = 650;
+        $maxVal = 750;
 
-        if ($equity > 50000) {
-            $minLots = 2.3;
-            $maxLots = 2.5;
-        }
+        $ticks = rand($minVal, $maxVal);
 
         if (!$lots) {
-            $lots = $this->randomFloat($minLots, $maxLots);
+            $lots = (float) $amount / $ticks;
+            $lots = floor($lots * 100) / 100;
+            $lots = number_format($lots, 2);
+
+            if ($equity <= 50000 && $lots > $maxLots) {
+                $lots = $this->randomFloat($minLots, $maxLots);
+                $ticks = floor($amount / $lots);
+            }
+        } else {
+            $ticks = (float) $amount * (float) $lots;
         }
-        $ticks = floor($amount / $lots);
 
         return [
             'ticks' => $ticks,
@@ -164,6 +179,7 @@ class PairLimitsController extends Controller
             'amount' => $ticks * $lots
         ];
     }
+
 
 //    public function convertUnitsToLots($amount, $equity, $lots = 0)
 //    {
