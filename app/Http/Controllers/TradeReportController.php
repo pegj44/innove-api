@@ -16,6 +16,7 @@ class TradeReportController extends Controller
         $trades = TradeQueueModel::where('account_id', auth()->user()->account_id)
             ->where('status', 'closed')
             ->orderBy('updated_at', 'desc')
+            ->limit(50)
             ->get();
 
         if (empty($trades)) {
