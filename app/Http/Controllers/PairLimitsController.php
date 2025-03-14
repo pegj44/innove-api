@@ -106,7 +106,7 @@ class PairLimitsController extends Controller
             $limitAmounts['tp'][] = $item['trading_account_credential']['package']['per_trade_target_profit'];
             $limitAmounts['tp'][] = $item['trading_account_credential']['package']['daily_target_profit'];
             $limitAmounts['tp'][] = getRemainingDailyTargetProfit($item);
-            $limitAmounts['tp'][] = getRemainingTargetProfit($item) + 20;
+            $limitAmounts['tp'][] = getRemainingTargetProfit($item) + 100;
 
             $tp = (float) min($limitAmounts['tp']);
             $sl = (float) min($limitAmounts['sl']);
