@@ -30,6 +30,7 @@ use App\Models\TradeHistoryV2Model;
 use App\Models\TradeHistoryV3Model;
 use App\Models\TradeQueueModel;
 use App\Models\TradeReport;
+use App\Models\TradingAccountCredential as TradingAccountCredentialModel;
 use App\Models\TradingUnitQueueModel;
 use App\Models\UnitProcessesModel;
 use App\Models\User;
@@ -380,6 +381,24 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
     Route::post('robot/setup/tradoverse', [TradeController::class, 'setupTradoverse']);
 
     Route::post('/dev/trade/initiate', [\App\Http\Controllers\DevController::class, 'initiateTrade']);
+
+    Route::post('dev/create-trade-report', function(Request $request)
+    {
+        $tradeAccount = TradingAccountCredentialModel::with(['package', 'package.funder'])
+            ->where('id', $request->id)
+            ->first();
+
+        $tradeAccount = $tradeAccount->toArray();
+
+        dd($tradeAccount);
+//        $tradeReport = new TradeReport();
+//        $tradeReport->account_id = auth()->user()->account_id;
+//        $tradeReport->trade_account_credential_id = $request->id;
+//        $tradeReport->starting_daily_equity = (float) $tradeAccount['package']['starting_balance'];
+//        $tradeReport->latest_equity = (float) $tradeAccount['package']['starting_balance'];
+//        $tradeReport->status = 'idle';
+//        $tradeReport->save();
+    });
 
     Route::post('dev', function(Request $request)
     {
