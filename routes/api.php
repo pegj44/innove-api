@@ -390,14 +390,13 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
         $tradeAccount = $tradeAccount->toArray();
 
-        dd($tradeAccount);
-//        $tradeReport = new TradeReport();
-//        $tradeReport->account_id = auth()->user()->account_id;
-//        $tradeReport->trade_account_credential_id = $request->id;
-//        $tradeReport->starting_daily_equity = (float) $tradeAccount['package']['starting_balance'];
-//        $tradeReport->latest_equity = (float) $tradeAccount['package']['starting_balance'];
-//        $tradeReport->status = 'idle';
-//        $tradeReport->save();
+        $tradeReport = new TradeReport();
+        $tradeReport->account_id = auth()->user()->account_id;
+        $tradeReport->trade_account_credential_id = $request->id;
+        $tradeReport->starting_daily_equity = (float) $tradeAccount['package']['starting_balance'];
+        $tradeReport->latest_equity = (float) $tradeAccount['package']['starting_balance'];
+        $tradeReport->status = 'idle';
+        $tradeReport->save();
     });
 
     Route::post('dev', function(Request $request)
