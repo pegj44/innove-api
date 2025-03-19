@@ -145,14 +145,6 @@ class PairLimitsController extends Controller
 
     public function convertUnitsToLots($amount, $equity, $lots = 0)
     {
-//        info(print_r([
-//            'convertUnitsToLots' => [
-//                'amount' => $amount,
-//                'equity' => $equity,
-//                'lots' => $lots
-//            ]
-//        ], true));
-
         $minLots = 1.3;
         $maxLots = 1.5;
         $minVal = 650;
@@ -180,29 +172,6 @@ class PairLimitsController extends Controller
         ];
     }
 
-
-//    public function convertUnitsToLots($amount, $equity, $lots = 0)
-//    {
-//        $minLots = 1.3;
-//        $maxLots = 1.5;
-//
-//        if ($equity > 50000) {
-//            $minLots = 2.3;
-//            $maxLots = 2.5;
-//        }
-//
-//        if (!$lots) {
-//            $lots = $this->randomFloat($minLots, $maxLots);
-//        }
-//        $ticks = floor($amount / $lots);
-//
-//        return [
-//            'ticks' => $ticks,
-//            'lots' => $lots,
-//            'amount' => $ticks * $lots
-//        ];
-//    }
-
     public function scaleDownFunderPro($itemIds, $pairLimits, $limits)
     {
         $ratio = $this->getFunderRatio($itemIds);
@@ -211,80 +180,162 @@ class PairLimitsController extends Controller
             return $limits;
         }
 
-        $lowestVal = 99999;
-        $endRatio = max($ratio);
-        $baseRatio = 0;
+        $minLimits = [];
+        foreach ($pairLimits as $item) {
+            $key = $item['funder'] . "_" . $item['phase'];
+            $minValue = min($item['tp'], $item['sl']);
+            $minLimits[$key] = $minValue;
+        }
 
-//        $pair1Key = $pairLimits[0]['funder'] .'_'. $pairLimits[0]['phase'];
-//        $pair2Key = $pairLimits[1]['funder'] .'_'. $pairLimits[1]['phase'];
+        $ratioOperator = [];
+        $keys = array_keys($minLimits);
+
+        if (count($keys) == 2) {
+            $key1 = $keys[0]; // e.g., fpro_phase-2
+            $key2 = $keys[1]; // e.g., gff_phase-2
+
+            $ratio1 = $ratio[$key1];
+            $ratio2 = $ratio[$key2];
+
+            // Ensuring the pair with the higher ratio stays intact
+            if ($ratio1 > $ratio2) {
+                $higherRatioKey = $key1;
+                $lowerRatioKey = $key2;
+            } else {
+                $higherRatioKey = $key2;
+                $lowerRatioKey = $key1;
+            }
+
+            $higherRatioValue = $minLimits[$higherRatioKey];
+            $lowerRatioValue = $minLimits[$lowerRatioKey];
+            $higherRatio = $ratio[$higherRatioKey];
+            $lowerRatio = $ratio[$lowerRatioKey];
+
+            // Compute values to maintain the ratio
+            if ($lowerRatioValue * ($higherRatio / $lowerRatio) > $higherRatioValue) {
+                $ratioOperator[$higherRatioKey] = "same";
+                $ratioOperator[$lowerRatioKey] = "divide";
+            } else {
+                $ratioOperator[$higherRatioKey] = "same";
+                $ratioOperator[$lowerRatioKey] = "multiply";
+            }
+        }
+
+        foreach ($limits as $id => $limitItem) {
+            $limitName = $limitItem['funder'] .'_'. $limitItem['phase'];
+            $lots = (float) $limitItem['tp']['lots'];
+
+            if ($ratioOperator[$limitName] === 'divide') {
+                $lots = $lots / 2;
+            } elseif ($ratioOperator[$limitName] === 'multiply') {
+                $lots = $lots * 2;
+            }
+
+            $limits[$id]['tp']['lots'] = $lots;
+            $limits[$id]['sl']['lots'] = $lots;
+        }
+
+        return $limits;
+    }
+
+//    public function scaleDownFunderPro($itemIds, $pairLimits, $limits)
+//    {
+//        $ratio = $this->getFunderRatio($itemIds);
 //
-//        $pair1MinVal = (float) min($pairLimits[0]['tp'], $pairLimits[0]['sl']);
-//        $pair2MinVal = (float) min($pairLimits[1]['tp'], $pairLimits[1]['sl']);
+//        if (!$ratio) {
+//            return $limits;
+//        }
 //
-//        if ($ratio[$pair1Key] > 1) {
-//            if ($pair1MinVal >= ($pair2MinVal * $endRatio)) {
-//                $lowestValPair = [
-//                    $pair2Key => (int) $ratio[$pair2Key]
-//                ];
-//            } else {
-//                $lowestValPair = [
-//                    $pair1Key => (int) $ratio[$pair1Key]
-//                ];
-//            }
-//        } else {
-//            if ($pair2MinVal >= ($pair1MinVal * $endRatio)) {
-//                $lowestValPair = [
-//                    $pair1Key => (int) $ratio[$pair1Key]
-//                ];
-//            } else {
-//                $lowestValPair = [
-//                    $pair2Key => (int) $ratio[$pair2Key]
-//                ];
+//        $lowestVal = 99999;
+//        $endRatio = max($ratio);
+//        $baseRatio = 0;
+//
+////        $pair1Key = $pairLimits[0]['funder'] .'_'. $pairLimits[0]['phase'];
+////        $pair2Key = $pairLimits[1]['funder'] .'_'. $pairLimits[1]['phase'];
+////
+////        $pair1MinVal = (float) min($pairLimits[0]['tp'], $pairLimits[0]['sl']);
+////        $pair2MinVal = (float) min($pairLimits[1]['tp'], $pairLimits[1]['sl']);
+////
+////        if ($ratio[$pair1Key] > 1) {
+////            if ($pair1MinVal >= ($pair2MinVal * $endRatio)) {
+////                $lowestValPair = [
+////                    $pair2Key => (int) $ratio[$pair2Key]
+////                ];
+////            } else {
+////                $lowestValPair = [
+////                    $pair1Key => (int) $ratio[$pair1Key]
+////                ];
+////            }
+////        } else {
+////            if ($pair2MinVal >= ($pair1MinVal * $endRatio)) {
+////                $lowestValPair = [
+////                    $pair1Key => (int) $ratio[$pair1Key]
+////                ];
+////            } else {
+////                $lowestValPair = [
+////                    $pair2Key => (int) $ratio[$pair2Key]
+////                ];
+////            }
+////        }
+////
+//
+//        $lowestValPair = [];
+//
+//        foreach ($pairLimits as $item) {
+//            $minVal = (float) min($item['tp'], $item['sl']);
+//            $ratioName = $item['funder'] .'_'. $item['phase'];
+//            $itemRatio = $ratio[$ratioName];
+//
+//            if ($minVal <= $lowestVal) {
+//                if (empty($lowestValPair)) {
+//                    $lowestValPair = [
+//                        $ratioName => (int) $ratio[$ratioName]
+//                    ];
+//                    $lowestVal = $minVal;
+//                } else {
+//                    if ($itemRatio > 1) {
+//                        $lowestValPair = [
+//                            $ratioName => (int) $ratio[$ratioName]
+//                        ];
+//                        $lowestVal = $minVal;
+//                    }
+//                }
 //            }
 //        }
 //
-
-        foreach ($pairLimits as $item) {
-            $minVal = (float) min($item['tp'], $item['sl']);
-            if ($minVal < $lowestVal) {
-                $lowestValPair = [
-                    $item['funder'] .'_'. $item['phase'] => (int) $ratio[$item['funder'] .'_'. $item['phase']]
-                ];
-                $lowestVal = $minVal;
-            }
-        }
-
-
-
+//
+//
 //        info(print_r([
 //            '$ratio' => $ratio,
+//            '$lowestVal' => $lowestVal,
+//            '$lowestValPair' => $lowestValPair,
 //            '$pairLimits' => $pairLimits,
 //            'limits' => $limits
 //        ], true));
-
-        foreach ($limits as $id => $limitItem) {
-            if (isset($lowestValPair[$limitItem['funder'] .'_'. $limitItem['phase']])) {
-                $baseRatio = $lowestValPair[$limitItem['funder'] .'_'. $limitItem['phase']];
-            } else {
-                if ($baseRatio > 1) {
-                    $lots = (float) $limitItem['tp']['lots'] / $endRatio;
-                } else {
-                    $lots = (float) $limitItem['tp']['lots'] * $endRatio;
-                }
-                $limits[$id]['tp']['lots'] = $lots;
-                $limits[$id]['sl']['lots'] = $lots;
-            }
-        }
-
+//
+//        foreach ($limits as $id => $limitItem) {
+//            if (isset($lowestValPair[$limitItem['funder'] .'_'. $limitItem['phase']])) {
+//                $baseRatio = $lowestValPair[$limitItem['funder'] .'_'. $limitItem['phase']];
+//            } else {
+//                if ($baseRatio > 1) {
+//                    $lots = (float) $limitItem['tp']['lots'] / $endRatio;
+//                } else {
+//                    $lots = (float) $limitItem['tp']['lots'] * $endRatio;
+//                }
+//                $limits[$id]['tp']['lots'] = $lots;
+//                $limits[$id]['sl']['lots'] = $lots;
+//            }
+//        }
+//
 //        info(print_r([
 //            'ratio' => $ratio,
 //            '$lowestValPair' => $lowestValPair,
 //            '$lowestVal' => $lowestVal,
 //            '$baseRatio' => $baseRatio,
 //        ], true));
-
-        return $limits;
-    }
+//
+//        return $limits;
+//    }
 
     public function calculateFproCrossPhaseLimits($pairLimits)
     {

@@ -151,6 +151,35 @@ class TradeController extends Controller
         ], 'stop-trade', $matchPairData['platform_type'], $matchPairData['unit_id']);
     }
 
+    public function updateQueueReport(string $queueId, string $itemId)
+    {
+        $queueItem = TradeQueueModel::where('id', $queueId)
+            ->first();
+
+        if (empty($queueItem)) {
+            return response()->json(['error' => __('Pair queue not found.')]);
+        }
+
+        $queueData = maybe_unserialize($queueItem->data);
+
+        if (!empty($queueData[$itemId]['new_equity'])) {
+            return response()->json(['message' => __('Trade history is already updated.')]);
+        }
+
+        $tradeItem = TradeReport::where('id', $itemId)->first();
+
+        if ($queueData[$itemId]['latest_equity'] == $tradeItem->latest_equity) {
+            return response()->json(['message' => __('Trade item equity is not yet updated.')]);
+        }
+
+        $queueData[$itemId]['new_equity'] = $tradeItem->latest_equity;
+
+        $queueItem->data = maybe_serialize($queueData);
+        $queueItem->update();
+
+        return response()->json(['message' => __('Successfully updated history item.')]);
+    }
+
     /**
      * Let the pair know the trade is closed.
      * @param Request $request

@@ -277,6 +277,8 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
         Route::post('trade/start', 'startTrade');
 
         Route::post('trade/recover', 'tradeRecover');
+
+        Route::post('/history/{id}/update-item/{itemId}', 'updateQueueReport');
     });
 
     Route::controller(CalculationsController::class)->prefix('calculate')->group(function()
@@ -402,22 +404,19 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
     Route::post('dev', function(Request $request)
     {
 
-        $items = TradeReport::with(
-            'tradingAccountCredential.userAccount.tradingUnit',
-            'tradingAccountCredential.package',
-            'tradingAccountCredential.package.funder',
-            'tradingAccountCredential.funder.metadata',
-            'tradingAccountCredential.userAccount.funderAccountCredential',
-            'tradingAccountCredential.historyV3',
-            'tradingAccountCredential.payouts'
-        )
-            ->where('account_id', auth()->user()->account_id)
-            ->whereHas('tradingAccountCredential', function($query) {
-                $query->where('status', 'active');
-            });
-
-        dd($items->get());
-
+        /**
+         * @IMPORTANT
+         * Update ongoing trade item latest equity. Useful if the item is ongoing but the latest equity is not updated.
+         */
+//        $queue = TradeQueueModel::where('id', 4135)->first();
+//        $data = maybe_unserialize($queue->data);
+//        $data[315]['latest_equity'] = "101402.00";
+//
+//        $queue->data = maybe_serialize($data);
+//        $queue->update();
+//        !d($data);
+//
+//        die();
 
 //        UnitsEvent::dispatch(getUnitAuthId(), [
 //            'test' => 1

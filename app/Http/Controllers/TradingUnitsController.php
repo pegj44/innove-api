@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\UnitsEvent;
 use App\Events\UnitsRequestReceived;
+use App\Events\WebPush;
 use App\Models\TradingUnitsModel;
 use App\Models\User;
 use App\Models\UserUnitLogin;
@@ -260,6 +261,8 @@ class TradingUnitsController extends Controller
                     'errors' => __('Failed to save the trading unit.')
                 ]);
             }
+
+            WebPush::dispatch(auth()->user()->account_id, [], 'unit-updated');
 
             return response()->json($this->getTradingUnits());
         } catch (\Exception $e) {
