@@ -324,6 +324,7 @@ class TradePairAccountsController extends Controller
                 'queue_id' => $item->queue_id,
                 'data' => maybe_unserialize($item->data),
                 'unit_ready' => maybe_unserialize($item->unit_ready),
+                'units_trading' => maybe_unserialize($item->units_trading),
                 'status' => $item->status,
                 'errors' => maybe_unserialize($item->errors),
                 'pair_status' => $item->pair_status,

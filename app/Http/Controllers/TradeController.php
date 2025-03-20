@@ -161,12 +161,11 @@ class TradeController extends Controller
         }
 
         $queueData = maybe_unserialize($queueItem->data);
+        $tradeItem = TradeReport::where('id', $itemId)->first();
 
-        if (!empty($queueData[$itemId]['new_equity'])) {
+        if (!empty($queueData[$itemId]['new_equity']) && $queueData[$itemId]['latest_equity'] != $queueData[$itemId]['new_equity']) {
             return response()->json(['message' => __('Trade history is already updated.')]);
         }
-
-        $tradeItem = TradeReport::where('id', $itemId)->first();
 
         if ($queueData[$itemId]['latest_equity'] == $tradeItem->latest_equity) {
             return response()->json(['message' => __('Trade item equity is not yet updated.')]);
@@ -178,6 +177,39 @@ class TradeController extends Controller
         $queueItem->update();
 
         return response()->json(['message' => __('Successfully updated history item.')]);
+    }
+
+    public function reportTradeStarted(Request $request)
+    {
+        $queueItem = TradeQueueModel::where('account_id', auth()->user()->account_id)
+            ->where('id', $request->get('queue_id'))
+            ->first();
+
+        if (empty($queueItem)) {
+            return response()->json(['error' => __('Pair queue not found.')]);
+        }
+
+        $unitsTrading = [];
+
+        if (!empty($queueItem->units_trading)) {
+            $unitsTrading = maybe_unserialize($queueItem->units_trading);
+        }
+
+        $currentDateTime = Carbon::now('Asia/Manila');
+//        $dateTime = $currentDateTime->format('F j, Y g:i:s A');
+        $dateTime = $currentDateTime->timestamp;
+        $unitsTrading[$request->get('itemId')] = $dateTime;
+
+        $queueItem->units_trading = maybe_serialize($unitsTrading);
+        $queueItem->update();
+
+        WebPush::dispatch(auth()->user()->account_id, [
+            'queueId' => $request->get('queue_id'),
+            'unitId' => $request->get('itemId'),
+            'dateTime' => $dateTime
+        ], 'unit-trade-started');
+
+        return response()->json($unitsTrading);
     }
 
     /**
@@ -201,12 +233,26 @@ class TradeController extends Controller
         $matchPairId = array_keys($queueData);
         $closedItems = (!empty($queueItem->closed_items))? maybe_unserialize($queueItem->closed_items) : [];
 
-        if (in_array($matchPairId[0], $closedItems)) {
-            return false; // Pair already closed, not need to report.
-        }
+        $currentDateTime = Carbon::now('Asia/Manila');
+        $dateTime = $currentDateTime->timestamp;
 
-        $queueItem->closed_items = maybe_serialize([$request->get('itemId')]); // save closed item.
+        $closedItems[$request->get('itemId')] = $dateTime;
+
+        $queueItem->closed_items = maybe_serialize($closedItems); // save closed item.
         $queueItem->update();
+
+        WebPush::dispatch(auth()->user()->account_id, [
+            'queueId' => $request->get('queue_id'),
+            'unitId' => $request->get('itemId'),
+            'dateTime' => $dateTime
+        ], 'unit-trade-closed');
+
+        if (isset($closedItems[$matchPairId[0]])) {
+            return false;
+        }
+//        if (isset($matchPairId[0], $closedItems)) {
+//            return false; // Pair already closed, not need to report.
+//        }
 
         $matchPairData = $queueData[$matchPairId[0]];
 

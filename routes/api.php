@@ -230,6 +230,7 @@ Route::middleware(['auth:sanctum', 'ability:unit'])->prefix('/unit/')->group(fun
 
     Route::controller(TradeController::class)->group(function()
     {
+        Route::post('report/trade-started', 'reportTradeStarted');
         Route::post('/report/close-trade', 'closePosition');
         Route::post('/close-trade', 'closeTrade');
         Route::post('/stop-trade', 'stopTrade');
@@ -403,6 +404,15 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
     Route::post('dev', function(Request $request)
     {
+//        $queue = TradeQueueModel::where('id', 4222)->first();
+//        $data = maybe_unserialize($queue->data);
+//
+//
+//        $data[265]['latest_equity'] = "98508.50";
+//
+//        $queue->data = maybe_serialize($data);
+//        $queue->update();
+//        die();
 
         /**
          * @IMPORTANT
