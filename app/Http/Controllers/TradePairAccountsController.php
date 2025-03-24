@@ -328,7 +328,7 @@ class TradePairAccountsController extends Controller
                 'status' => $item->status,
                 'errors' => maybe_unserialize($item->errors),
                 'pair_status' => $item->pair_status,
-                'closed_items' => $item->closed_items
+                'closed_items' => maybe_unserialize($item->closed_items)
             ];
 
             if (in_array($item->status, $pairStatuses)) {
