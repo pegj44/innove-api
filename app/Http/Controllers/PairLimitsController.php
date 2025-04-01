@@ -90,12 +90,74 @@ class PairLimitsController extends Controller
         $limits = [];
         $lowestItem = [];
 
+//        $randPerTradeTpSl = 0;
+
+//        foreach ($items as $handlerItem) {
+//            $handlerMinSlP = (float) $items[0]['trading_account_credential']['package']['per_trade_drawdown'];
+//            $handlerMaxSlP = (float) $items[0]['trading_account_credential']['package']['max_per_trade_drawdown'];
+//            $handlerRandSlP = rand($handlerMinSlP, $handlerMaxSlP);
+
+            $handlerMinTtP = (float) $items[0]['trading_account_credential']['package']['per_trade_target_profit'];
+            $handlerMaxTtP = (float) $items[0]['trading_account_credential']['package']['max_per_trade_target_profit'];
+
+            if ($handlerMaxTtP > 0) {
+                $handlerRandTtP = rand($handlerMinTtP, $handlerMaxTtP);
+            } else {
+                $handlerRandTtP = $handlerMinTtP;
+            }
+//        }
+        $isCrossPhase = ($items[0]['trading_account_credential']['package']['current_phase'] != $items[1]['trading_account_credential']['package']['current_phase']);
+
         foreach ($items as $item) {
 
             $rdd = TradeController::getCalculatedRdd($item);
             $limitAmounts = [];
 
-            $limitAmounts['sl'][] = $item['trading_account_credential']['package']['per_trade_drawdown'];
+//            $minSlP = (float) $item['trading_account_credential']['package']['per_trade_drawdown'];
+            $maxSlP = (float) $item['trading_account_credential']['package']['max_per_trade_drawdown'];
+
+            if ($maxSlP > 0) {
+                $limitAmounts['sl'][] = (float) $item['trading_account_credential']['package']['max_per_trade_drawdown'];
+            } else {
+                $limitAmounts['sl'][] = (float) $item['trading_account_credential']['package']['per_trade_drawdown'];
+            }
+
+
+//            $limitAmounts['sl'][] = $handlerRandTtP;
+//            $minSlP = (float) $item['trading_account_credential']['package']['per_trade_drawdown'];
+//            $maxSlP = (float) $item['trading_account_credential']['package']['max_per_trade_drawdown'];
+//
+//            if ($maxSlP > 0) {
+//                if (!$randPerTradeTpSl) {
+//                    $initRandPerTradeTpSl = rand($minSlP, $maxSlP);
+//                    $randPerTradeTpSl = $initRandPerTradeTpSl;
+//                    $limitAmounts['sl'][] = $initRandPerTradeTpSl;
+//                } else {
+//                    $limitAmounts['sl'][] = $randPerTradeTpSl;
+//                }
+//            } else {
+//                $limitAmounts['sl'][] = $minSlP;
+//            }
+
+
+
+
+//            $perTradeDds[] = $minSlP;
+//
+//            if ($maxSlP > 0) {
+//                $perTradeDds[] = $maxSlP;
+//            }
+
+
+//            $minSlP = (float) $item['trading_account_credential']['package']['per_trade_drawdown'];
+//            $maxSlP = (float) $item['trading_account_credential']['package']['max_per_trade_drawdown'];
+//
+//            if ($maxSlP > 0) {
+//                $limitAmounts['sl'][] = rand($minSlP, $maxSlP);
+//            } else {
+//                $limitAmounts['sl'][] = $minSlP;
+//            }
+
             $limitAmounts['sl'][] = $item['trading_account_credential']['package']['daily_drawdown'];
             $limitAmounts['sl'][] = getRemainingDailyStopLoss($item);
 
@@ -103,10 +165,55 @@ class PairLimitsController extends Controller
                 $limitAmounts['sl'][] = TradeController::getCalculatedRdd($item);
             }
 
-            $limitAmounts['tp'][] = $item['trading_account_credential']['package']['per_trade_target_profit'];
+//            $minTtP = (float) $item['trading_account_credential']['package']['per_trade_target_profit'];
+//            $maxTtP = (float) $item['trading_account_credential']['package']['max_per_trade_target_profit'];
+//
+//            $perTradeTPs[] = $minTtP;
+//
+//            if ($maxTtP > 0) {
+//                $perTradeTPs[] = $maxTtP;
+//            }
+
+//            $minTtP = (float) $item['trading_account_credential']['package']['per_trade_target_profit'];
+//            $maxTtP = (float) $item['trading_account_credential']['package']['max_per_trade_target_profit'];
+//
+//            if ($maxTtP > 0) {
+//                $limitAmounts['tp'][] = rand($minTtP, $maxTtP);
+//            } else {
+//                $limitAmounts['tp'][] = $minTtP;
+//            }
+
+//            if ($maxSlP > 0) {
+//                if (!$randPerTradeTpSl) {
+//                    $initRandPerTradeTpSl = rand($minSlP, $maxSlP);
+//                    $randPerTradeTpSl = $initRandPerTradeTpSl;
+//                    $limitAmounts['tp'][] = $initRandPerTradeTpSl;
+//                } else {
+//                    $limitAmounts['tp'][] = $randPerTradeTpSl;
+//                }
+//            } else {
+//                $limitAmounts['tp'][] = $minSlP;
+//            }
+
+            if ($isCrossPhase) {
+                $maxTtP = (float) $item['trading_account_credential']['package']['max_per_trade_target_profit'];
+                if ($maxTtP > 0) {
+                    $minTtP = (float) $item['trading_account_credential']['package']['per_trade_target_profit'];
+                    $limitAmounts['tp'][] = rand($minTtP, $maxTtP);
+                } else {
+                    $limitAmounts['tp'][] = $item['trading_account_credential']['package']['per_trade_target_profit'];
+                }
+            } else {
+                $limitAmounts['tp'][] = $handlerRandTtP;
+            }
+
+
             $limitAmounts['tp'][] = $item['trading_account_credential']['package']['daily_target_profit'];
             $limitAmounts['tp'][] = getRemainingDailyTargetProfit($item);
-            $limitAmounts['tp'][] = getRemainingTargetProfit($item) + 80;
+            $remainingTp = getRemainingTargetProfit($item);
+            $limitAmounts['tp'][] = $remainingTp + 80;
+
+//            $remainingTps[] = $remainingTp;
 
             $tp = (float) min($limitAmounts['tp']);
             $sl = (float) min($limitAmounts['sl']);
@@ -145,8 +252,10 @@ class PairLimitsController extends Controller
 
     public function convertUnitsToLots($amount, $equity, $lots = 0)
     {
-        $minLots = 1.3;
-        $maxLots = 1.5;
+        $fiftyKMinLots = 1.3;
+        $fiftyKMaxLots = 1.5;
+
+
         $minVal = 650;
         $maxVal = 750;
 
@@ -157,10 +266,16 @@ class PairLimitsController extends Controller
             $lots = floor($lots * 100) / 100;
             $lots = number_format($lots, 2);
 
-            if ($equity <= 50000 && $lots > $maxLots) {
-                $lots = $this->randomFloat($minLots, $maxLots);
+            if ($equity <= 50000 && $lots > $fiftyKMaxLots) {
+                $lots = $this->randomFloat($fiftyKMinLots, $fiftyKMaxLots);
                 $ticks = floor($amount / $lots);
             }
+
+            if ($equity >= 90000 && $lots > 3) {
+                $lots = 3;
+                $ticks = floor($amount / $lots);
+            }
+
         } else {
             $ticks = (float) $amount * (float) $lots;
         }

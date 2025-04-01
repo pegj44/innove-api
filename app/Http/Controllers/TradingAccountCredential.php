@@ -16,6 +16,7 @@ class TradingAccountCredential extends Controller
     {
         $credentials = TradingAccountCredentialModel::with(['package', 'package.funder', 'userAccount.tradingUnit', 'tradeReports'])
             ->where('account_id', auth()->user()->account_id)
+            ->orderBy('created_at', 'desc')
             ->get();
 
         return response()->json($credentials);

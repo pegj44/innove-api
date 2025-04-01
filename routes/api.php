@@ -31,7 +31,9 @@ use App\Models\TradeHistoryV3Model;
 use App\Models\TradeQueueModel;
 use App\Models\TradeReport;
 use App\Models\TradingAccountCredential as TradingAccountCredentialModel;
+use App\Models\TradingNewsModel;
 use App\Models\TradingUnitQueueModel;
+use App\Models\TradingUnitsModel;
 use App\Models\UnitProcessesModel;
 use App\Models\User;
 use Carbon\Carbon;
@@ -39,9 +41,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SubAccountsController;
 use Illuminate\Support\Str;
+use Laravel\Sanctum\PersonalAccessToken;
 
 /*
 |--------------------------------------------------------------------------
@@ -69,6 +73,10 @@ Route::post('/login', [AuthenticatedSessionController::class, 'store'])
     ->name('login');
 
 Route::post('/unit-login', [AuthenticatedSessionController::class, 'loginUnit'])
+    ->middleware('guest')
+    ->name('unit-login');
+
+Route::post('/v2/unit-login', [AuthenticatedSessionController::class, 'loginUnit_v2'])
     ->middleware('guest')
     ->name('unit-login');
 
@@ -142,7 +150,13 @@ Route::middleware(['auth:sanctum', 'ability:admin,investor'])->group(function()
     {
         Route::get('trade/paired-items', 'getPairedItems');
     });
+
+    Route::controller(TradePairAccountsController::class)->prefix('trade/')->group(function()
+    {
+        Route::get('queue', 'getQueuedItems');
+    });
 });
+
 Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 {
     Route::post('dev/audit-account', [\App\Http\Controllers\DevController::class, 'auditAccount']);
@@ -167,7 +181,7 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 
     Route::controller(TradePairAccountsController::class)->prefix('trade/')->group(function()
     {
-        Route::get('queue', 'getQueuedItems');
+//        Route::get('queue', 'getQueuedItems');
 //        Route::post('/starting-equity/update', 'updateStartingEquity');
 //        Route::post('/starting-equity/update/status', 'updateStartingEquityJobStatus');
         Route::post('/pair-accounts', 'pairAccounts');
@@ -404,6 +418,53 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
     Route::post('dev', function(Request $request)
     {
+//        $unitId = $request->get('unitId');
+//        $unitData = TradingUnitsModel::where('unit_id', $unitId)->get()->toArray();
+//
+//        if (empty($unitData)) {
+//            return response()->json([
+//                'errors' => 'This Unit is not registered.'
+//            ], 401);
+//        }
+//
+//        if (count($unitData) > 1) {
+//            return response()->json([
+//                'errors' => 'This Unit is registered on multiple accounts.'
+//            ], 401);
+//        }
+//
+//        $userToken = $request->get('userToken');
+//        $token = PersonalAccessToken::findToken($userToken);
+//
+//        if ($token && $token->tokenable instanceof \App\Models\User) { // check if user token is still valid.
+//            $data = [
+//                'token' => $userToken,
+//                'userId' => $token->tokenable->id,
+//                'name' => $token->tokenable->name,
+//                'unit' => $unitId
+//            ];
+//        } else {
+//            $user = User::where('account_id', $unitData[0]['account_id'])
+//                ->where('email', 'like', '%shoplink@innovetechsolutions.rpahandler%')
+//                ->first();
+//
+//            $tokenName = env('UNIT_TOKEN_NAME');
+//            $newToken = $user->createToken($tokenName, ['unit'])->plainTextToken;
+//
+//            $data = [
+//                'token' => $newToken,
+//                'userId' => $user->id,
+//                'name' => $user->name,
+//                'unit' => $unitId
+//            ];
+//        }
+//
+//        return response()->json($data);
+
+
+        die();
+
+
 //        $queue = TradeQueueModel::where('id', 4222)->first();
 //        $data = maybe_unserialize($queue->data);
 //

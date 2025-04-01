@@ -21,11 +21,11 @@ class TradingUnitsModel extends Model
 
     public function account()
     {
-        $this->belongsTo(AccountModel::class, 'account_id');
+        return $this->belongsTo(AccountModel::class, 'account_id');
     }
 
     public function userAccounts()
     {
-        $this->hasMany(TradingIndividual::class, 'trading_unit_id');
+        return $this->hasMany(TradingIndividual::class, 'trading_unit_id');
     }
 }
