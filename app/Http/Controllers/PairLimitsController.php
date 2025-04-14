@@ -8,8 +8,16 @@ class PairLimitsController extends Controller
 {
     public $items;
 
+    public $futuresMinSl = 90;
+    public $futuresMaxSl = 100;
+    public $forexMinSl;
+    public $forexMaxSl;
+
     public function __construct($items)
     {
+        $this->forexMinSl = $this->futuresMinSl * 10;
+        $this->forexMaxSl = $this->futuresMaxSl * 10;
+
         $this->items = is_object($items)? $items->toArray() : $items;
     }
 
@@ -45,10 +53,8 @@ class PairLimitsController extends Controller
     public function getBestOrderAmountTicksRatio($targetAmount)
     {
         $targetAmount = (float) $targetAmount;
-        $minSl = 65;
-        $maxSl = 75;
 
-        $finalTicks = rand($minSl, $maxSl);
+        $finalTicks = rand($this->futuresMinSl, $this->futuresMaxSl);
         $divide = floor($targetAmount) / $finalTicks;
         $finalOrderAmnt = floor($divide);
 
@@ -209,7 +215,13 @@ class PairLimitsController extends Controller
 
 
             $limitAmounts['tp'][] = $item['trading_account_credential']['package']['daily_target_profit'];
-            $limitAmounts['tp'][] = getRemainingDailyTargetProfit($item);
+            $remainingDailyTp = getRemainingDailyTargetProfit($item);
+
+//            info(print_r([
+//                '$remainingDailyTp' => $remainingDailyTp
+//            ], true));
+
+            $limitAmounts['tp'][] = $remainingDailyTp + 80;
             $remainingTp = getRemainingTargetProfit($item);
             $limitAmounts['tp'][] = $remainingTp + 80;
 
@@ -255,11 +267,7 @@ class PairLimitsController extends Controller
         $fiftyKMinLots = 1.3;
         $fiftyKMaxLots = 1.5;
 
-
-        $minVal = 650;
-        $maxVal = 750;
-
-        $ticks = rand($minVal, $maxVal);
+        $ticks = rand($this->forexMinSl, $this->forexMaxSl);
 
         if (!$lots) {
             $lots = (float) $amount / $ticks;
@@ -454,6 +462,10 @@ class PairLimitsController extends Controller
 
     public function calculateFproCrossPhaseLimits($pairLimits)
     {
+//        info(print_r([
+//            'calculateFproCrossPhaseLimits' => $pairLimits
+//        ], true));
+
         $stopLossAllowance = 25;
         $phase2MinAmnt = 0;
         $phase3MinAmnt = 0;
@@ -488,7 +500,10 @@ class PairLimitsController extends Controller
 
             $baseLimits = $this->getBestOrderAmountTicksRatio($maxNum);
             $baseLimits = $this->convertUnitsToLots($baseLimits['amount'], min($equities));
-
+//            info(print_r([
+//                '$maxNum' => $maxNum,
+//                '$baseLimits' => $baseLimits
+//            ], true));
             $slTicks = (float) $baseLimits['ticks'];
             $tpTicks = $slTicks - 20;
             $lots = (float) $baseLimits['lots'];

@@ -301,6 +301,33 @@ class TradePairAccountsController extends Controller
 //        return $distance;
 //    }
 
+    public function getAccountActivityCount()
+    {
+        $unitActivityCounts = [];
+
+        $tradeQueue = TradeQueueModel::where('account_id', auth()->user()->account_id)
+            ->whereIn('status', ['trading', 'pairing', 'error'])
+            ->get()
+            ->map(function ($item) {
+                $item->data = maybe_unserialize($item->data);
+                return $item;
+            });
+
+        if (!empty($tradeQueue)) {
+            foreach ($tradeQueue as $item) {
+                foreach ($item->data as $itemData) {
+                    if (isset($unitActivityCounts[$itemData['unit_id']])) {
+                        $unitActivityCounts[$itemData['unit_id']] += 1;
+                    } else {
+                        $unitActivityCounts[$itemData['unit_id']] = 1;
+                    }
+                }
+            }
+        }
+
+        return response()->json($unitActivityCounts);
+    }
+
     public function getQueuedItems()
     {
         $queueItems = TradeQueueModel::where('account_id', auth()->user()->account_id)

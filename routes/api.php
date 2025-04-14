@@ -149,6 +149,7 @@ Route::middleware(['auth:sanctum', 'ability:admin,investor'])->group(function()
     Route::controller(TradePairAccountsController::class)->group(function()
     {
         Route::get('trade/paired-items', 'getPairedItems');
+        Route::get('trade/activity-count', 'getAccountActivityCount');
     });
 
     Route::controller(TradePairAccountsController::class)->prefix('trade/')->group(function()
@@ -418,48 +419,66 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
     Route::post('dev', function(Request $request)
     {
-//        $unitId = $request->get('unitId');
-//        $unitData = TradingUnitsModel::where('unit_id', $unitId)->get()->toArray();
+        $tradingAccounts = TradeReport::with(['tradingAccountCredential.package.funder', 'tradingAccountCredential.userAccount.tradingUnit'])
+            ->where('account_id', 7)
+            ->whereNotIn('status', ['breached', 'breachedcheck'])
+            ->whereHas('tradingAccountCredential', function($query) {
+                $query->where('status', 'active');
+            })
+            ->get()
+            ->toArray();
+
+        $tradingAccountCounts = [];
+
+        foreach ($tradingAccounts as $item) {
+            $tradingAccountCounts[$item['trading_account_credential']['user_account']['trading_unit']['unit_id']][$item['trading_account_credential']['package']['funder']['alias']][] = $item['trading_account_credential']['funder_account_id'];
+//            $tradingAccountCounts['trading_account_credential']['user_account']['trading_unit']['unit_id'][] = $item['trading_account_credential']['funder_account_id'];
+//            echo '<pre>';
+//            var_dump($item);
+//            echo '</pre>';
+        }
+
+        !d($tradingAccountCounts);
+        die();
+//        $data = $request->all();
+//        $items = TradeReport::with(
+//            'tradingAccountCredential.userAccount.tradingUnit',
+//            'tradingAccountCredential.package',
+//            'tradingAccountCredential.package.funder',
+//            'tradingAccountCredential.funder.metadata',
+//            'tradingAccountCredential.userAccount.funderAccountCredential',
+//            'tradingAccountCredential.historyV3',
+//            'tradingAccountCredential.payouts'
+//        )
+//            ->where('account_id', auth()->user()->account_id)
+//            ->whereHas('tradingAccountCredential', function($query) {
+//                $query->where('status', 'active');
+//            });
 //
-//        if (empty($unitData)) {
-//            return response()->json([
-//                'errors' => 'This Unit is not registered.'
-//            ], 401);
+//        if ($request->get('current_phase')) {
+//            $items->whereHas('tradingAccountCredential', function($query) use ($data) {
+//                $query->where('current_phase', $data['current_phase']);
+//            });
 //        }
 //
-//        if (count($unitData) > 1) {
-//            return response()->json([
-//                'errors' => 'This Unit is registered on multiple accounts.'
-//            ], 401);
+//        if ($request->get('tradingAccountIds')) {
+//            $items->whereIn('trade_account_credential_id', $data['tradingAccountIds']);
 //        }
 //
-//        $userToken = $request->get('userToken');
-//        $token = PersonalAccessToken::findToken($userToken);
-//
-//        if ($token && $token->tokenable instanceof \App\Models\User) { // check if user token is still valid.
-//            $data = [
-//                'token' => $userToken,
-//                'userId' => $token->tokenable->id,
-//                'name' => $token->tokenable->name,
-//                'unit' => $unitId
-//            ];
-//        } else {
-//            $user = User::where('account_id', $unitData[0]['account_id'])
-//                ->where('email', 'like', '%shoplink@innovetechsolutions.rpahandler%')
-//                ->first();
-//
-//            $tokenName = env('UNIT_TOKEN_NAME');
-//            $newToken = $user->createToken($tokenName, ['unit'])->plainTextToken;
-//
-//            $data = [
-//                'token' => $newToken,
-//                'userId' => $user->id,
-//                'name' => $user->name,
-//                'unit' => $unitId
-//            ];
+//        if ($request->get('ids')) {
+//            $items->whereIn('id', $data['ids']);
 //        }
 //
-//        return response()->json($data);
+//        if ($request->get('statusNotIn')) {
+//            $items->whereNotIn('status', $request->get('statusNotIn'));
+//        }
+//
+//        if ($request->get('raw')) {
+//            return $items->get();
+//        }
+//
+//        dd($items->count());
+//        return response()->json($items->get());
 
 
         die();

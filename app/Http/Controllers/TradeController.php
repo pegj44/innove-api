@@ -103,13 +103,15 @@ class TradeController extends Controller
         $queueItem->update();
 
         $message = $request->get('message');
+        $errorCode = $request->get('err_code');
+        $action = ($errorCode === 'initialize_error')? 'trade-initialize-error' : 'trade-error';
 
         UnitResponse::dispatch(auth()->user()->account_id, [
             'queue_db_id' => $tradeQueueId,
             'itemId' => $itemId,
             'message' => (!empty($message))? $message : __('Failed to initialize'),
-            'sound' => false,
-        ], 'trade-initialize-error');
+            'sound' => true,
+        ], $action);
 
         return response()->json($queueItem);
     }
@@ -557,6 +559,11 @@ class TradeController extends Controller
         $readyUnits = array_unique($readyUnits);
         $queueItem->unit_ready = maybe_serialize($readyUnits);
 
+        UnitResponse::dispatch(auth()->user()->account_id, [
+            'queue_db_id' => $queueItem->id,
+            'itemId' => $request->get('itemId')
+        ], 'unit-ready');
+
         if (count($readyUnits) > 1) {
             $queueItem->status = 'pairing';
             $queueItem->pair_status = '';
@@ -782,6 +789,8 @@ class TradeController extends Controller
 
             $purchaseType = (!empty($purchaseTypeOverrides[$unitId]))? $purchaseTypeOverrides[$unitId] : $unitItem['purchase_type'];
 
+            $formattedTime = Carbon::now()->format('M. d, Y g:i:s a');
+
             $args = [
                 'year' => $futureTime->format('Y'),
                 'month' => $futureTime->format('m'),
@@ -799,6 +808,7 @@ class TradeController extends Controller
                     'alias' => $unitItem['funder'],
                     'theme' => $unitItem['funder_theme']
                 ],
+                'timeTradeSent' => $formattedTime,
                 'account_id' => $unitItem['funder_account_id_long'],
                 'account_id_short' => $unitItem['funder_account_id_short'],
                 'loginUsername' => $unitItem['login_username'],
