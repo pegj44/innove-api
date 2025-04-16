@@ -356,6 +356,9 @@ class PairLimitsController extends Controller
 
             $limits[$id]['tp']['lots'] = $lots;
             $limits[$id]['sl']['lots'] = $lots;
+
+            $limits[$id]['tp']['amount'] = $lots * (float) $limits[$id]['tp']['ticks'];
+            $limits[$id]['sl']['amount'] = $lots * (float) $limits[$id]['sl']['ticks'];
         }
 
         return $limits;
@@ -841,6 +844,19 @@ class PairLimitsController extends Controller
             $limits[$pairLimits[1]['id']]['tp']['amount'] = $item2Tp * $lots;
             $limits[$pairLimits[1]['id']]['sl']['ticks'] = $item2Sl;
             $limits[$pairLimits[1]['id']]['sl']['amount'] = $item2Sl * $lots;
+        }
+
+        foreach ($limits as $itemId => $limitItem) {
+            if ($limitItem['funder'] === 'pipf') {
+                $newTpTick = (float) $limitItem['tp']['ticks'] / 100;
+                $newTpTick = floor($newTpTick * 100) / 100;
+
+                $newSlTick = (float) $limitItem['sl']['ticks'] / 100;
+                $newSlTick = floor($newSlTick * 100) / 100;
+
+                $limits[$itemId]['tp']['ticks'] = number_format($newTpTick, 2, '.', '');
+                $limits[$itemId]['sl']['ticks'] = number_format($newSlTick, 2, '.', '');
+            }
         }
 
         return $limits;

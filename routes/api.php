@@ -156,6 +156,11 @@ Route::middleware(['auth:sanctum', 'ability:admin,investor'])->group(function()
     {
         Route::get('queue', 'getQueuedItems');
     });
+
+    Route::controller(TradingUnitsController::class)->prefix('units/')->group(function()
+    {
+        Route::get('funders-count', 'getFundersCount');
+    });
 });
 
 Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
@@ -419,26 +424,28 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
     Route::post('dev', function(Request $request)
     {
-        $tradingAccounts = TradeReport::with(['tradingAccountCredential.package.funder', 'tradingAccountCredential.userAccount.tradingUnit'])
-            ->where('account_id', 7)
-            ->whereNotIn('status', ['breached', 'breachedcheck'])
-            ->whereHas('tradingAccountCredential', function($query) {
-                $query->where('status', 'active');
-            })
-            ->get()
-            ->toArray();
-
-        $tradingAccountCounts = [];
-
-        foreach ($tradingAccounts as $item) {
-            $tradingAccountCounts[$item['trading_account_credential']['user_account']['trading_unit']['unit_id']][$item['trading_account_credential']['package']['funder']['alias']][] = $item['trading_account_credential']['funder_account_id'];
-//            $tradingAccountCounts['trading_account_credential']['user_account']['trading_unit']['unit_id'][] = $item['trading_account_credential']['funder_account_id'];
-//            echo '<pre>';
-//            var_dump($item);
-//            echo '</pre>';
-        }
-
-        !d($tradingAccountCounts);
+//        $tradingAccounts = TradeReport::with(['tradingAccountCredential.package.funder', 'tradingAccountCredential.userAccount.tradingUnit'])
+//            ->where('account_id', 7)
+//            ->whereNotIn('status', ['breached', 'breachedcheck'])
+//            ->whereHas('tradingAccountCredential', function($query) {
+//                $query->where('status', 'active');
+//            })
+//            ->get()
+//            ->toArray();
+//
+//        $fundersTheme = [];
+//        $tradingAccountCounts = [];
+//
+//        foreach ($tradingAccounts as $item) {
+//            $funderAlias = $item['trading_account_credential']['package']['funder']['alias'];
+//            $fundersTheme[$funderAlias] = [
+//                'current_phase' => $item['trading_account_credential']['package']['current_phase'],
+//                'theme' => $item['trading_account_credential']['package']['funder']['theme']
+//            ];
+//            $tradingAccountCounts[$item['trading_account_credential']['user_account']['trading_unit']['unit_id']][$funderAlias][] = $item['trading_account_credential']['funder_account_id'];
+//        }
+//
+//        !d($fundersTheme, $tradingAccountCounts);
         die();
 //        $data = $request->all();
 //        $items = TradeReport::with(

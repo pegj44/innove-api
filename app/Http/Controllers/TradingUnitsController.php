@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\UnitsEvent;
 use App\Events\UnitsRequestReceived;
 use App\Events\WebPush;
+use App\Models\TradeReport;
 use App\Models\TradingUnitsModel;
 use App\Models\User;
 use App\Models\UserUnitLogin;
@@ -67,6 +68,39 @@ class TradingUnitsController extends Controller
 //                'errors' => __('Unable to create a unit.')
 //            ], 400);
 //        }
+    }
+
+    public function getFundersCount()
+    {
+        $tradingAccounts = TradeReport::with(['tradingAccountCredential.package.funder', 'tradingAccountCredential.userAccount.tradingUnit'])
+            ->where('account_id', auth()->user()->account_id)
+            ->whereNotIn('status', ['breached', 'breachedcheck'])
+            ->whereHas('tradingAccountCredential', function($query) {
+                $query->where('status', 'active');
+            })
+            ->get()
+            ->toArray();
+
+        if (empty($tradingAccounts)) {
+            return response()->json([]);
+        }
+
+        $fundersTheme = [];
+        $tradingAccountCounts = [];
+
+        foreach ($tradingAccounts as $item) {
+            $funderAlias = $item['trading_account_credential']['package']['funder']['alias'];
+            $fundersTheme[$funderAlias] = [
+                'current_phase' => $item['trading_account_credential']['package']['current_phase'],
+                'theme' => $item['trading_account_credential']['package']['funder']['theme']
+            ];
+            $tradingAccountCounts[$item['trading_account_credential']['user_account']['trading_unit']['unit_id']][$funderAlias][] = $item['trading_account_credential']['funder_account_id'];
+        }
+
+        return response()->json([
+            'themes' => $fundersTheme,
+            'funderCounts' => $tradingAccountCounts
+        ]);
     }
 
     public static function getUnitsArray()
