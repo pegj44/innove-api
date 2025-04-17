@@ -424,6 +424,13 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
     Route::post('dev', function(Request $request)
     {
+        $tradeQueue = TradeQueueModel::where('id', $request->get('id'))->first();
+        $tradeQueue->status = $request->get('status');
+        $tradeQueue->update();
+//
+        !d('updated');
+//        !d($tradeQueue);
+        die();
 //        $tradingAccounts = TradeReport::with(['tradingAccountCredential.package.funder', 'tradingAccountCredential.userAccount.tradingUnit'])
 //            ->where('account_id', 7)
 //            ->whereNotIn('status', ['breached', 'breachedcheck'])
