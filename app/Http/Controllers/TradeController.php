@@ -69,6 +69,14 @@ class TradeController extends Controller
         return response()->json($queueData);
     }
 
+    public function checkAccountBreached(Request $request)
+    {
+        $itemId = $request->get('itemId');
+        $tradeItem = TradeReport::where('id', $itemId)->first();
+
+
+    }
+
     public function tradeErrorReport(Request $request)
     {
         $itemId = $request->get('itemId');
@@ -509,31 +517,6 @@ class TradeController extends Controller
                 return 'abstained';
             }
         }
-
-//        if (!empty($dailyDrawdown)) {
-//            $positiveThreshold = $dailyDrawdown * 0.9;
-//            $negativeThreshold = -$dailyDrawdown * 0.9;
-//
-//            info(print_r([
-//                'tradeReport' => [
-//                    'funder' => (!empty($tradeAccount['trading_account_credential']['funder_account_id']))? $tradeAccount['trading_account_credential']['funder_account_id'] : 'no funder',
-//                    '$dailyDrawdown' => $dailyDrawdown,
-//                    '$positiveThreshold' => $positiveThreshold,
-//                    '$negativeThreshold' => $negativeThreshold,
-//                    '$pnl' => $pnl,
-//                    'isAbstained' => ($pnl >= $positiveThreshold || $pnl <= $negativeThreshold)
-//                ]
-//            ], true));
-//
-//            if ($pnl >= $positiveThreshold || $pnl <= $negativeThreshold) {
-//                return 'abstained';
-//            }
-//
-//        } else {
-//            if ($pnl >= ($dailyTp / 2)) {
-//                return 'abstained';
-//            }
-//        }
 
         return 'idle';
     }

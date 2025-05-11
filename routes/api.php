@@ -24,6 +24,7 @@ use App\Http\Controllers\TradingIndividualsController;
 use App\Http\Controllers\TradingUnitsController;
 use App\Http\Controllers\UserEntityController;
 use App\Models\AccountsPairingJob;
+use App\Models\FunderAccountCredentialModel;
 use App\Models\FundersMetadata;
 use App\Models\SubAccountsModel;
 use App\Models\TradeHistoryV2Model;
@@ -298,6 +299,7 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
         Route::post('trade/start', 'startTrade');
 
         Route::post('trade/recover', 'tradeRecover');
+        Route::post('trade/breached-check', 'checkAccountBreached');
 
         Route::post('/history/{id}/update-item/{itemId}', 'updateQueueReport');
     });
@@ -401,6 +403,8 @@ Route::post('/aw-snap', function(Request $request) {
 
 Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 {
+    Route::post('dev/cleanup/trade-queue', [\App\Http\Controllers\BackgroundTasksController::class, 'cleanUpTradeQueue']);
+
     Route::post('robot/setup/tradoverse', [TradeController::class, 'setupTradoverse']);
 
     Route::post('/dev/trade/initiate', [\App\Http\Controllers\DevController::class, 'initiateTrade']);
@@ -424,12 +428,19 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
     Route::post('dev', function(Request $request)
     {
-        $tradeQueue = TradeQueueModel::where('id', $request->get('id'))->first();
-        $tradeQueue->status = $request->get('status');
-        $tradeQueue->update();
+        $oldUserId = 7;
+        $newUserId = 10;
+
+        $postIds = \App\Models\TradingIndividual::where('account_id', $oldUserId)
+            ->limit(1000)
+            ->pluck('id');
+
+        $updatedCount = \App\Models\TradingIndividual::whereIn('id', $postIds)->update(['account_id' => $newUserId]);
+        $remainingCount = \App\Models\TradingIndividual::where('account_id', $oldUserId)->count();
 //
-        !d('updated');
-//        !d($tradeQueue);
+        echo "$updatedCount updated to account_id = $newUserId.\n";
+        echo "$remainingCount remaining with account_id = $oldUserId.\n";
+
         die();
 //        $tradingAccounts = TradeReport::with(['tradingAccountCredential.package.funder', 'tradingAccountCredential.userAccount.tradingUnit'])
 //            ->where('account_id', 7)

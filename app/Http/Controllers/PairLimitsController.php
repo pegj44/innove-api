@@ -217,13 +217,14 @@ class PairLimitsController extends Controller
             $limitAmounts['tp'][] = $item['trading_account_credential']['package']['daily_target_profit'];
             $remainingDailyTp = getRemainingDailyTargetProfit($item);
 
-//            info(print_r([
-//                '$remainingDailyTp' => $remainingDailyTp
-//            ], true));
-
-            $limitAmounts['tp'][] = $remainingDailyTp + 80;
+            $limitAmounts['tp'][] = $remainingDailyTp + 100;
             $remainingTp = getRemainingTargetProfit($item);
-            $limitAmounts['tp'][] = $remainingTp + 80;
+            $limitAmounts['tp'][] = $remainingTp + 100;
+
+//            info(print_r([
+//                '$remainingDailyTp' => $remainingDailyTp,
+//                '$remainingTp' => $remainingTp
+//            ], true));
 
 //            $remainingTps[] = $remainingTp;
 
@@ -249,6 +250,10 @@ class PairLimitsController extends Controller
         foreach ($lowestItem as $itemId => $sortedItem) {
             $sortedLimits[] = $limits[$itemId];
         }
+
+//        info(print_r([
+//            '$sortedLimits' => $sortedLimits
+//        ], true));
 
         return $sortedLimits;
     }
@@ -359,6 +364,11 @@ class PairLimitsController extends Controller
 
             $limits[$id]['tp']['amount'] = $lots * (float) $limits[$id]['tp']['ticks'];
             $limits[$id]['sl']['amount'] = $lots * (float) $limits[$id]['sl']['ticks'];
+
+            if ($limitItem['funder'] === 'pipf') {
+                $limits[$id]['tp']['amount'] = $limits[$id]['tp']['amount'] * 100;
+                $limits[$id]['sl']['amount'] = $limits[$id]['sl']['amount'] * 100;
+            }
         }
 
         return $limits;
@@ -558,6 +568,10 @@ class PairLimitsController extends Controller
             return $this->calculateFproCrossPhaseLimits($pairLimits);
         }
 
+//        info(print_r([
+//            'getLimits' => $pairLimits
+//        ], true));
+
         $itemIds = [];
 
         foreach ($this->items as $pItem) {
@@ -650,7 +664,17 @@ class PairLimitsController extends Controller
         $ratio = [
             'fpro_phase-2_upft_phase-2' => '1:2',
             'fpro_phase-2_gff_phase-2' => '1:2',
+
             'fpro_phase-3_fpro_phase-2' => '1:4',
+            'fpro_phase-3_upft_phase-3' => '1:2',
+            'fpro_phase-3_gff_phase-3' => '1:2',
+
+            'pipf_phase-2_upft_phase-2' => '1:2',
+            'pipf_phase-2_gff_phase-2' => '1:2',
+
+            'pipf_phase-3_pipf_phase-2' => '1:4',
+            'pipf_phase-3_upft_phase-3' => '1:2',
+            'pipf_phase-3_gff_phase-3' => '1:2',
         ];
 
         $pckg_1 = $itemIds[0]['trading_account_credential']['package'];
@@ -688,45 +712,6 @@ class PairLimitsController extends Controller
 
         return false;
     }
-
-//    public function scaleDownFunderPro($itemIds, $pairLimits, $limits)
-//    {
-//        $funders = [
-//            $itemIds[0]['trading_account_credential']['package']['funder']['alias'],
-//            $itemIds[1]['trading_account_credential']['package']['funder']['alias']
-//        ];
-//
-//        $hasFpro = $this->hasSpecificCrossFunder($funders, 'fpro');
-//
-//        if ($hasFpro === false) {
-//            return $limits;
-//        }
-//
-//        $fproKey = $hasFpro;
-//        $nonFproKey = ($fproKey === 0)? 1 : 0;
-//
-//        $nonFproLots = $limits[$itemIds[$nonFproKey]['id']]['tp']['lots'];
-//        $nonFproTp = $limits[$itemIds[$nonFproKey]['id']]['tp']['ticks'];
-//        $nonFproSL = $limits[$itemIds[$nonFproKey]['id']]['sl']['ticks'];
-//
-//        $fproLots = $nonFproLots;
-//
-//        if ($itemIds[0]['trading_account_credential']['package']['current_phase'] !== 'phase-3') {
-//            $fproLots = $nonFproLots / 2;
-//        }
-//
-//        $fproLots = $fproLots / 10;
-//
-//        $limits[$itemIds[$fproKey]['id']]['tp']['lots'] = $fproLots;
-//        $limits[$itemIds[$fproKey]['id']]['tp']['ticks'] = $nonFproTp * 10;
-//        $limits[$itemIds[$fproKey]['id']]['tp']['amount'] = ($nonFproTp * 10) * $fproLots;
-//
-//        $limits[$itemIds[$fproKey]['id']]['sl']['lots'] = $fproLots;
-//        $limits[$itemIds[$fproKey]['id']]['sl']['ticks'] = $nonFproSL * 10;
-//        $limits[$itemIds[$fproKey]['id']]['sl']['amount'] = ($nonFproSL * 10) * $fproLots;
-//
-//        return $limits;
-//    }
 
     public function hasSpecificCrossFunder($funders, $funder)
     {

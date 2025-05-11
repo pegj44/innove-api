@@ -46,7 +46,7 @@ function getRemainingTargetProfit($item)
         return 200;
     }
 
-    return ($remainingTP <= 100 )? 100 : $remainingTP;
+    return ($remainingTP <= 200 )? 200 : $remainingTP;
 }
 
 
