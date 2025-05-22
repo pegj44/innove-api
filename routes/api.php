@@ -428,20 +428,25 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
     Route::post('dev', function(Request $request)
     {
-        $oldUserId = 7;
-        $newUserId = 10;
 
-        $postIds = \App\Models\TradingIndividual::where('account_id', $oldUserId)
-            ->limit(1000)
-            ->pluck('id');
-
-        $updatedCount = \App\Models\TradingIndividual::whereIn('id', $postIds)->update(['account_id' => $newUserId]);
-        $remainingCount = \App\Models\TradingIndividual::where('account_id', $oldUserId)->count();
-//
-        echo "$updatedCount updated to account_id = $newUserId.\n";
-        echo "$remainingCount remaining with account_id = $oldUserId.\n";
-
+        echo 'nothing here';
         die();
+
+
+//        $oldUserId = 7;
+//        $newUserId = 10;
+//
+//        $postIds = \App\Models\TradingIndividual::where('account_id', $oldUserId)
+//            ->limit(1000)
+//            ->pluck('id');
+//
+//        $updatedCount = \App\Models\TradingIndividual::whereIn('id', $postIds)->update(['account_id' => $newUserId]);
+//        $remainingCount = \App\Models\TradingIndividual::where('account_id', $oldUserId)->count();
+////
+//        echo "$updatedCount updated to account_id = $newUserId.\n";
+//        echo "$remainingCount remaining with account_id = $oldUserId.\n";
+//
+//        die();
 //        $tradingAccounts = TradeReport::with(['tradingAccountCredential.package.funder', 'tradingAccountCredential.userAccount.tradingUnit'])
 //            ->where('account_id', 7)
 //            ->whereNotIn('status', ['breached', 'breachedcheck'])
@@ -464,7 +469,7 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 //        }
 //
 //        !d($fundersTheme, $tradingAccountCounts);
-        die();
+//        die();
 //        $data = $request->all();
 //        $items = TradeReport::with(
 //            'tradingAccountCredential.userAccount.tradingUnit',
@@ -506,7 +511,7 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 //        return response()->json($items->get());
 
 
-        die();
+//        die();
 
 
 //        $queue = TradeQueueModel::where('id', 4222)->first();
@@ -738,8 +743,8 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
 // Change password
 
-        $email = 'admin_aitrade@disruptorai.com';
-        $newPassword = 'aiJM41!!3';
+        $email = 'jmmerquita@disruptorai.com';
+        $newPassword = 'inv2r!3345';
 
         // Find the user by email
         $user = User::where('email', $email)->first();

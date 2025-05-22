@@ -288,6 +288,11 @@ class TradingUnitsController extends Controller
             }
 
             $unit->fill($request->only(['name', 'unit_id', 'status']));
+
+            info(print_r([
+                'unitUpdate' => $unit->status
+            ], true));
+
             $unitSaved = $unit->update();
 
             if (!$unitSaved) {
@@ -297,6 +302,10 @@ class TradingUnitsController extends Controller
             }
 
             WebPush::dispatch(auth()->user()->account_id, [], 'unit-updated');
+
+            UnitsEvent::dispatch(getUnitAuthId(), [
+                'unitId' => $unit->unit_id,
+            ], 'unit-updated', '', $unit->unit_id);
 
             return response()->json($this->getTradingUnits());
         } catch (\Exception $e) {

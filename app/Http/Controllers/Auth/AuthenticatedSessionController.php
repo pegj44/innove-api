@@ -121,16 +121,18 @@ class AuthenticatedSessionController extends Controller
             ]);
         }
 
-        if (!$unitData[0]['status']) {
-            return response()->json([
-                'errors' => 'This Unit is deactivated.'
-            ]);
-        }
-
         $userToken = $request->get('userToken');
         $token = PersonalAccessToken::findToken($userToken);
 
         if ($token && $token->tokenable instanceof \App\Models\User) { // check if user token is still valid.
+
+            if (!$unitData[0]['status']) {
+                return response()->json([
+                    'userId' => $token->tokenable->id,
+                    'errors' => 'This Unit is deactivated.'
+                ]);
+            }
+
             $data = [
                 'token' => $userToken,
                 'userId' => $token->tokenable->id,
@@ -142,6 +144,13 @@ class AuthenticatedSessionController extends Controller
             $user = User::where('account_id', $unitData[0]['account_id'])
                 ->where('email', 'like', '%@innovetechsolutions.rpahandler%')
                 ->first();
+
+            if (!$unitData[0]['status']) {
+                return response()->json([
+                    'userId' => $user->id,
+                    'errors' => 'This Unit is deactivated.'
+                ]);
+            }
 
             $tokenName = env('UNIT_TOKEN_NAME');
             $newToken = $user->createToken($tokenName, ['unit'])->plainTextToken;
