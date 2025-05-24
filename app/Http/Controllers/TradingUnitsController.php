@@ -103,6 +103,15 @@ class TradingUnitsController extends Controller
         ]);
     }
 
+    public function getUnitsByStatus(string $status)
+    {
+        $units = TradingUnitsModel::where('account_id', auth()->user()->account_id)
+            ->where('status', $status)
+            ->get();
+
+        return response()->json($units);
+    }
+
     public static function getUnitsArray()
     {
         $unitsObj = new TradingUnitsController();
@@ -288,10 +297,6 @@ class TradingUnitsController extends Controller
             }
 
             $unit->fill($request->only(['name', 'unit_id', 'status']));
-
-            info(print_r([
-                'unitUpdate' => $unit->status
-            ], true));
 
             $unitSaved = $unit->update();
 

@@ -209,6 +209,7 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
         Route::post('/trading-unit/{id}', 'update');
         Route::get('/trading-units', 'getTradingUnits');
         Route::get('/trading-units-array', 'getUnitsArray');
+        Route::get('/trading-units/status/{id}', 'getUnitsByStatus');
         Route::delete('trading-unit/{id}', 'destroy');
 
         Route::post('/trading-units/settings/set-password', 'setPassword');
