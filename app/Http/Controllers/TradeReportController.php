@@ -275,7 +275,13 @@ class TradeReportController extends Controller
                 return response()->json(['errors' => $validator->errors()], 422);
             }
 
-            $item = TradeReport::where('id', $id)->where('account_id', auth()->user()->account_id)->first();
+            $item = TradeReport::with([
+                    'tradingAccountCredential',
+                    'tradingAccountCredential.package'
+                ])
+                ->where('id', $id)
+                ->where('account_id', auth()->user()->account_id)
+                ->first();
 
             if (!$item) {
                 return response()->json(['errors' => __('Unable to find trade report.')]);
@@ -289,6 +295,11 @@ class TradeReportController extends Controller
                 $tradeAccount = TradingAccountCredential::where('id', $item->trade_account_credential_id)->first();
                 $tradeAccount->status = 'inactive';
                 $tradeAccount->update();
+            }
+
+            // Update status
+            if ($item->latest_equity != $data['latest_equity']) {
+                $data['status'] = TradeController::getStatusByLatestEquity($item, $data['latest_equity']);
             }
 
             $item->fill($data);

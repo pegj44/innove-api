@@ -438,7 +438,7 @@ class TradeController extends Controller
 
         $latestEquity = (float) str_replace(' ', '', $latestEquity);
         $tradeAccount->latest_equity = $latestEquity;
-        $tradeAccount->status = $this->getStatusByLatestEquity($tradeAccount, $latestEquity);
+        $tradeAccount->status = self::getStatusByLatestEquity($tradeAccount, $latestEquity);
 
         if ($updateNtrades) {
             $tradeAccount->n_trades += 1;
@@ -490,7 +490,7 @@ class TradeController extends Controller
         return 'N/A';
     }
 
-    private function getStatusByLatestEquity($tradeAccount, $latestEquity)
+    public static function getStatusByLatestEquity($tradeAccount, $latestEquity)
     {
         $package = new FunderPackageDataController($tradeAccount);
         $tradeAccount = $tradeAccount->toArray();
