@@ -364,7 +364,7 @@ class PairLimitsController extends Controller
 
             $limits[$id]['tp']['amount'] = $lots * (float) $limits[$id]['tp']['ticks'];
             $limits[$id]['sl']['amount'] = $lots * (float) $limits[$id]['sl']['ticks'];
-
+            
             if ($limitItem['funder'] === 'pipf') {
                 $limits[$id]['tp']['amount'] = $limits[$id]['tp']['amount'] * 100;
                 $limits[$id]['sl']['amount'] = $limits[$id]['sl']['amount'] * 100;
