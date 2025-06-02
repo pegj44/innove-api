@@ -114,12 +114,14 @@ class TradeController extends Controller
         $errorCode = $request->get('err_code');
         $action = ($errorCode === 'initialize_error')? 'trade-initialize-error' : $errorCode;
 
-        UnitResponse::dispatch(auth()->user()->account_id, [
-            'queue_db_id' => $tradeQueueId,
-            'itemId' => $itemId,
-            'message' => (!empty($message))? $message : __('Failed to initialize'),
-            'sound' => true,
-        ], $action);
+        if (!empty($action)) {
+            UnitResponse::dispatch(auth()->user()->account_id, [
+                'queue_db_id' => $tradeQueueId,
+                'itemId' => $itemId,
+                'message' => (!empty($message))? $message : __('Failed to initialize'),
+                'sound' => true,
+            ], $action);
+        }
 
         return response()->json($queueItem);
     }

@@ -430,6 +430,26 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
     Route::post('dev', function(Request $request)
     {
 
+//        $items = TradeReport::with(
+//            'tradingAccountCredential'
+//        )
+////            ->where('account_id', auth()->user()->account_id)
+//            ->where('status', 'breached')
+//            ->whereHas('tradingAccountCredential', function($query) {
+//                $query->where('status', 'active');
+//            })
+//            ->where('updated_at', '<=', Carbon::now()->subDays(3))
+//            ->get()->toArray();
+//
+//
+//        foreach ($items as $item) {
+//            $tradeItem = \App\Models\TradingAccountCredential::where('id', $item['trade_account_credential_id'])->first();
+//            $tradeItem->status = 'inactive';
+//            $tradeItem->update();
+//        }
+//
+//        dd($items);
+
         echo 'nothing here';
         die();
 

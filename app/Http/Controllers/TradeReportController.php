@@ -108,7 +108,7 @@ class TradeReportController extends Controller
         }
 
         if ($request->get('statusNotIn')) {
-            $items->whereNotIn('status', $request->get('statusNotIn'));
+//            $items->whereNotIn('status', $request->get('statusNotIn'));
         }
 
         if ($request->get('raw')) {

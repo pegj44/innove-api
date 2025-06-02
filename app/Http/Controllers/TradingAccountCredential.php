@@ -139,6 +139,12 @@ class TradingAccountCredential extends Controller
                 return response()->json(['errors' => __('Failed to update credential.')]);
             }
 
+            if ($data['status'] !== 'inactive') {
+                $tradeItem = TradeReport::where('trade_account_credential_id', $id)->first();
+                $tradeItem->status = 'onhold';
+                $tradeItem->update();
+            }
+
             return response()->json(['message' => __('Successfully updated credential.')]);
         } catch (\Exception $e) {
 
