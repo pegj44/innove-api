@@ -15,16 +15,21 @@ class UserSettingsController extends Controller
             $settings = UserSettingsModel::where('user_id', auth()->id())
                 ->where('key', $key)
                 ->first();
+
+            $settings->value = maybe_unserialize($settings->value);
         } else {
             $settings = UserSettingsModel::where('user_id', auth()->id())
-            ->get();
+                ->get()
+                ->mapWithKeys(function ($item) {
+                    $item->value = maybe_unserialize($item->value);
+                    return [$item->key => $item];
+                })
+                ->toArray();
         }
 
         if (empty($settings)) {
             return response()->json(null);
         }
-
-        $settings->value = maybe_unserialize($settings->value);
 
         return response()->json($settings);
     }

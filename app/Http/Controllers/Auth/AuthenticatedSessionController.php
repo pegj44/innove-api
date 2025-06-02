@@ -104,6 +104,68 @@ class AuthenticatedSessionController extends Controller
         ], 401);
     }
 
+    public function loginUnit_v2(Request $request)
+    {
+        $unitId = $request->get('unitId');
+        $unitData = TradingUnitsModel::where('unit_id', $unitId)->get()->toArray();
+
+        if (empty($unitData)) {
+            return response()->json([
+                'errors' => 'This Unit is not registered.'
+            ]);
+        }
+
+        if (count($unitData) > 1) {
+            return response()->json([
+                'errors' => 'This Unit is registered on multiple accounts.'
+            ]);
+        }
+
+        $userToken = $request->get('userToken');
+        $token = PersonalAccessToken::findToken($userToken);
+
+        if ($token && $token->tokenable instanceof \App\Models\User) { // check if user token is still valid.
+
+            if (!$unitData[0]['status']) {
+                return response()->json([
+                    'userId' => $token->tokenable->id,
+                    'errors' => 'This Unit is deactivated.'
+                ]);
+            }
+
+            $data = [
+                'token' => $userToken,
+                'userId' => $token->tokenable->id,
+                'name' => $token->tokenable->name,
+                'unit' => $unitId
+            ];
+        } else {
+
+            $user = User::where('account_id', $unitData[0]['account_id'])
+                ->where('email', 'like', '%@innovetechsolutions.rpahandler%')
+                ->first();
+
+            if (!$unitData[0]['status']) {
+                return response()->json([
+                    'userId' => $user->id,
+                    'errors' => 'This Unit is deactivated.'
+                ]);
+            }
+
+            $tokenName = env('UNIT_TOKEN_NAME');
+            $newToken = $user->createToken($tokenName, ['unit'])->plainTextToken;
+
+            $data = [
+                'token' => $newToken,
+                'userId' => $user->id,
+                'name' => $user->name,
+                'unit' => $unitId
+            ];
+        }
+
+        return response()->json($data);
+    }
+
     public function loginUnit(Request $request)
     {
         $validator = Validator::make($request->only(['username', 'password']), [

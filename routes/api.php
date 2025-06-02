@@ -24,6 +24,7 @@ use App\Http\Controllers\TradingIndividualsController;
 use App\Http\Controllers\TradingUnitsController;
 use App\Http\Controllers\UserEntityController;
 use App\Models\AccountsPairingJob;
+use App\Models\FunderAccountCredentialModel;
 use App\Models\FundersMetadata;
 use App\Models\SubAccountsModel;
 use App\Models\TradeHistoryV2Model;
@@ -31,7 +32,9 @@ use App\Models\TradeHistoryV3Model;
 use App\Models\TradeQueueModel;
 use App\Models\TradeReport;
 use App\Models\TradingAccountCredential as TradingAccountCredentialModel;
+use App\Models\TradingNewsModel;
 use App\Models\TradingUnitQueueModel;
+use App\Models\TradingUnitsModel;
 use App\Models\UnitProcessesModel;
 use App\Models\User;
 use Carbon\Carbon;
@@ -39,9 +42,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SubAccountsController;
 use Illuminate\Support\Str;
+use Laravel\Sanctum\PersonalAccessToken;
 
 /*
 |--------------------------------------------------------------------------
@@ -69,6 +74,10 @@ Route::post('/login', [AuthenticatedSessionController::class, 'store'])
     ->name('login');
 
 Route::post('/unit-login', [AuthenticatedSessionController::class, 'loginUnit'])
+    ->middleware('guest')
+    ->name('unit-login');
+
+Route::post('/v2/unit-login', [AuthenticatedSessionController::class, 'loginUnit_v2'])
     ->middleware('guest')
     ->name('unit-login');
 
@@ -141,8 +150,20 @@ Route::middleware(['auth:sanctum', 'ability:admin,investor'])->group(function()
     Route::controller(TradePairAccountsController::class)->group(function()
     {
         Route::get('trade/paired-items', 'getPairedItems');
+        Route::get('trade/activity-count', 'getAccountActivityCount');
+    });
+
+    Route::controller(TradePairAccountsController::class)->prefix('trade/')->group(function()
+    {
+        Route::get('queue', 'getQueuedItems');
+    });
+
+    Route::controller(TradingUnitsController::class)->prefix('units/')->group(function()
+    {
+        Route::get('funders-count', 'getFundersCount');
     });
 });
+
 Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 {
     Route::post('dev/audit-account', [\App\Http\Controllers\DevController::class, 'auditAccount']);
@@ -167,7 +188,7 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
 
     Route::controller(TradePairAccountsController::class)->prefix('trade/')->group(function()
     {
-        Route::get('queue', 'getQueuedItems');
+//        Route::get('queue', 'getQueuedItems');
 //        Route::post('/starting-equity/update', 'updateStartingEquity');
 //        Route::post('/starting-equity/update/status', 'updateStartingEquityJobStatus');
         Route::post('/pair-accounts', 'pairAccounts');
@@ -188,6 +209,7 @@ Route::middleware(['auth:sanctum', 'ability:admin'])->group(function()
         Route::post('/trading-unit/{id}', 'update');
         Route::get('/trading-units', 'getTradingUnits');
         Route::get('/trading-units-array', 'getUnitsArray');
+        Route::get('/trading-units/status/{id}', 'getUnitsByStatus');
         Route::delete('trading-unit/{id}', 'destroy');
 
         Route::post('/trading-units/settings/set-password', 'setPassword');
@@ -230,6 +252,7 @@ Route::middleware(['auth:sanctum', 'ability:unit'])->prefix('/unit/')->group(fun
 
     Route::controller(TradeController::class)->group(function()
     {
+        Route::post('report/trade-started', 'reportTradeStarted');
         Route::post('/report/close-trade', 'closePosition');
         Route::post('/close-trade', 'closeTrade');
         Route::post('/stop-trade', 'stopTrade');
@@ -277,6 +300,9 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
         Route::post('trade/start', 'startTrade');
 
         Route::post('trade/recover', 'tradeRecover');
+        Route::post('trade/breached-check', 'checkAccountBreached');
+
+        Route::post('/history/{id}/update-item/{itemId}', 'updateQueueReport');
     });
 
     Route::controller(CalculationsController::class)->prefix('calculate')->group(function()
@@ -378,6 +404,8 @@ Route::post('/aw-snap', function(Request $request) {
 
 Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 {
+    Route::post('dev/cleanup/trade-queue', [\App\Http\Controllers\BackgroundTasksController::class, 'cleanUpTradeQueue']);
+
     Route::post('robot/setup/tradoverse', [TradeController::class, 'setupTradoverse']);
 
     Route::post('/dev/trade/initiate', [\App\Http\Controllers\DevController::class, 'initiateTrade']);
@@ -402,22 +430,134 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
     Route::post('dev', function(Request $request)
     {
 
-        $items = TradeReport::with(
-            'tradingAccountCredential.userAccount.tradingUnit',
-            'tradingAccountCredential.package',
-            'tradingAccountCredential.package.funder',
-            'tradingAccountCredential.funder.metadata',
-            'tradingAccountCredential.userAccount.funderAccountCredential',
-            'tradingAccountCredential.historyV3',
-            'tradingAccountCredential.payouts'
-        )
-            ->where('account_id', auth()->user()->account_id)
-            ->whereHas('tradingAccountCredential', function($query) {
-                $query->where('status', 'active');
-            });
+//        $items = TradeReport::with(
+//            'tradingAccountCredential'
+//        )
+////            ->where('account_id', auth()->user()->account_id)
+//            ->where('status', 'breached')
+//            ->whereHas('tradingAccountCredential', function($query) {
+//                $query->where('status', 'active');
+//            })
+//            ->where('updated_at', '<=', Carbon::now()->subDays(3))
+//            ->get()->toArray();
+//
+//
+//        foreach ($items as $item) {
+//            $tradeItem = \App\Models\TradingAccountCredential::where('id', $item['trade_account_credential_id'])->first();
+//            $tradeItem->status = 'inactive';
+//            $tradeItem->update();
+//        }
+//
+//        dd($items);
 
-        dd($items->get());
+        echo 'nothing here';
+        die();
 
+
+//        $oldUserId = 7;
+//        $newUserId = 10;
+//
+//        $postIds = \App\Models\TradingIndividual::where('account_id', $oldUserId)
+//            ->limit(1000)
+//            ->pluck('id');
+//
+//        $updatedCount = \App\Models\TradingIndividual::whereIn('id', $postIds)->update(['account_id' => $newUserId]);
+//        $remainingCount = \App\Models\TradingIndividual::where('account_id', $oldUserId)->count();
+////
+//        echo "$updatedCount updated to account_id = $newUserId.\n";
+//        echo "$remainingCount remaining with account_id = $oldUserId.\n";
+//
+//        die();
+//        $tradingAccounts = TradeReport::with(['tradingAccountCredential.package.funder', 'tradingAccountCredential.userAccount.tradingUnit'])
+//            ->where('account_id', 7)
+//            ->whereNotIn('status', ['breached', 'breachedcheck'])
+//            ->whereHas('tradingAccountCredential', function($query) {
+//                $query->where('status', 'active');
+//            })
+//            ->get()
+//            ->toArray();
+//
+//        $fundersTheme = [];
+//        $tradingAccountCounts = [];
+//
+//        foreach ($tradingAccounts as $item) {
+//            $funderAlias = $item['trading_account_credential']['package']['funder']['alias'];
+//            $fundersTheme[$funderAlias] = [
+//                'current_phase' => $item['trading_account_credential']['package']['current_phase'],
+//                'theme' => $item['trading_account_credential']['package']['funder']['theme']
+//            ];
+//            $tradingAccountCounts[$item['trading_account_credential']['user_account']['trading_unit']['unit_id']][$funderAlias][] = $item['trading_account_credential']['funder_account_id'];
+//        }
+//
+//        !d($fundersTheme, $tradingAccountCounts);
+//        die();
+//        $data = $request->all();
+//        $items = TradeReport::with(
+//            'tradingAccountCredential.userAccount.tradingUnit',
+//            'tradingAccountCredential.package',
+//            'tradingAccountCredential.package.funder',
+//            'tradingAccountCredential.funder.metadata',
+//            'tradingAccountCredential.userAccount.funderAccountCredential',
+//            'tradingAccountCredential.historyV3',
+//            'tradingAccountCredential.payouts'
+//        )
+//            ->where('account_id', auth()->user()->account_id)
+//            ->whereHas('tradingAccountCredential', function($query) {
+//                $query->where('status', 'active');
+//            });
+//
+//        if ($request->get('current_phase')) {
+//            $items->whereHas('tradingAccountCredential', function($query) use ($data) {
+//                $query->where('current_phase', $data['current_phase']);
+//            });
+//        }
+//
+//        if ($request->get('tradingAccountIds')) {
+//            $items->whereIn('trade_account_credential_id', $data['tradingAccountIds']);
+//        }
+//
+//        if ($request->get('ids')) {
+//            $items->whereIn('id', $data['ids']);
+//        }
+//
+//        if ($request->get('statusNotIn')) {
+//            $items->whereNotIn('status', $request->get('statusNotIn'));
+//        }
+//
+//        if ($request->get('raw')) {
+//            return $items->get();
+//        }
+//
+//        dd($items->count());
+//        return response()->json($items->get());
+
+
+//        die();
+
+
+//        $queue = TradeQueueModel::where('id', 4222)->first();
+//        $data = maybe_unserialize($queue->data);
+//
+//
+//        $data[265]['latest_equity'] = "98508.50";
+//
+//        $queue->data = maybe_serialize($data);
+//        $queue->update();
+//        die();
+
+        /**
+         * @IMPORTANT
+         * Update ongoing trade item latest equity. Useful if the item is ongoing but the latest equity is not updated.
+         */
+//        $queue = TradeQueueModel::where('id', 4135)->first();
+//        $data = maybe_unserialize($queue->data);
+//        $data[315]['latest_equity'] = "101402.00";
+//
+//        $queue->data = maybe_serialize($data);
+//        $queue->update();
+//        !d($data);
+//
+//        die();
 
 //        UnitsEvent::dispatch(getUnitAuthId(), [
 //            'test' => 1
@@ -624,8 +764,8 @@ Route::middleware(['auth:sanctum', 'ability:admin,unit'])->group(function()
 
 // Change password
 
-        $email = 'admin_aitrade@disruptorai.com';
-        $newPassword = 'aiJM41!!3';
+        $email = 'jmmerquita@disruptorai.com';
+        $newPassword = 'inv2r!3345';
 
         // Find the user by email
         $user = User::where('email', $email)->first();

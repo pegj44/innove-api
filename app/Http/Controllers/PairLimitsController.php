@@ -8,8 +8,16 @@ class PairLimitsController extends Controller
 {
     public $items;
 
+    public $futuresMinSl = 90;
+    public $futuresMaxSl = 100;
+    public $forexMinSl;
+    public $forexMaxSl;
+
     public function __construct($items)
     {
+        $this->forexMinSl = $this->futuresMinSl * 10;
+        $this->forexMaxSl = $this->futuresMaxSl * 10;
+
         $this->items = is_object($items)? $items->toArray() : $items;
     }
 
@@ -45,10 +53,8 @@ class PairLimitsController extends Controller
     public function getBestOrderAmountTicksRatio($targetAmount)
     {
         $targetAmount = (float) $targetAmount;
-        $minSl = 65;
-        $maxSl = 75;
 
-        $finalTicks = rand($minSl, $maxSl);
+        $finalTicks = rand($this->futuresMinSl, $this->futuresMaxSl);
         $divide = floor($targetAmount) / $finalTicks;
         $finalOrderAmnt = floor($divide);
 
@@ -90,12 +96,74 @@ class PairLimitsController extends Controller
         $limits = [];
         $lowestItem = [];
 
+//        $randPerTradeTpSl = 0;
+
+//        foreach ($items as $handlerItem) {
+//            $handlerMinSlP = (float) $items[0]['trading_account_credential']['package']['per_trade_drawdown'];
+//            $handlerMaxSlP = (float) $items[0]['trading_account_credential']['package']['max_per_trade_drawdown'];
+//            $handlerRandSlP = rand($handlerMinSlP, $handlerMaxSlP);
+
+            $handlerMinTtP = (float) $items[0]['trading_account_credential']['package']['per_trade_target_profit'];
+            $handlerMaxTtP = (float) $items[0]['trading_account_credential']['package']['max_per_trade_target_profit'];
+
+            if ($handlerMaxTtP > 0) {
+                $handlerRandTtP = rand($handlerMinTtP, $handlerMaxTtP);
+            } else {
+                $handlerRandTtP = $handlerMinTtP;
+            }
+//        }
+        $isCrossPhase = ($items[0]['trading_account_credential']['package']['current_phase'] != $items[1]['trading_account_credential']['package']['current_phase']);
+
         foreach ($items as $item) {
 
             $rdd = TradeController::getCalculatedRdd($item);
             $limitAmounts = [];
 
-            $limitAmounts['sl'][] = $item['trading_account_credential']['package']['per_trade_drawdown'];
+//            $minSlP = (float) $item['trading_account_credential']['package']['per_trade_drawdown'];
+            $maxSlP = (float) $item['trading_account_credential']['package']['max_per_trade_drawdown'];
+
+            if ($maxSlP > 0) {
+                $limitAmounts['sl'][] = (float) $item['trading_account_credential']['package']['max_per_trade_drawdown'];
+            } else {
+                $limitAmounts['sl'][] = (float) $item['trading_account_credential']['package']['per_trade_drawdown'];
+            }
+
+
+//            $limitAmounts['sl'][] = $handlerRandTtP;
+//            $minSlP = (float) $item['trading_account_credential']['package']['per_trade_drawdown'];
+//            $maxSlP = (float) $item['trading_account_credential']['package']['max_per_trade_drawdown'];
+//
+//            if ($maxSlP > 0) {
+//                if (!$randPerTradeTpSl) {
+//                    $initRandPerTradeTpSl = rand($minSlP, $maxSlP);
+//                    $randPerTradeTpSl = $initRandPerTradeTpSl;
+//                    $limitAmounts['sl'][] = $initRandPerTradeTpSl;
+//                } else {
+//                    $limitAmounts['sl'][] = $randPerTradeTpSl;
+//                }
+//            } else {
+//                $limitAmounts['sl'][] = $minSlP;
+//            }
+
+
+
+
+//            $perTradeDds[] = $minSlP;
+//
+//            if ($maxSlP > 0) {
+//                $perTradeDds[] = $maxSlP;
+//            }
+
+
+//            $minSlP = (float) $item['trading_account_credential']['package']['per_trade_drawdown'];
+//            $maxSlP = (float) $item['trading_account_credential']['package']['max_per_trade_drawdown'];
+//
+//            if ($maxSlP > 0) {
+//                $limitAmounts['sl'][] = rand($minSlP, $maxSlP);
+//            } else {
+//                $limitAmounts['sl'][] = $minSlP;
+//            }
+
             $limitAmounts['sl'][] = $item['trading_account_credential']['package']['daily_drawdown'];
             $limitAmounts['sl'][] = getRemainingDailyStopLoss($item);
 
@@ -103,10 +171,62 @@ class PairLimitsController extends Controller
                 $limitAmounts['sl'][] = TradeController::getCalculatedRdd($item);
             }
 
-            $limitAmounts['tp'][] = $item['trading_account_credential']['package']['per_trade_target_profit'];
+//            $minTtP = (float) $item['trading_account_credential']['package']['per_trade_target_profit'];
+//            $maxTtP = (float) $item['trading_account_credential']['package']['max_per_trade_target_profit'];
+//
+//            $perTradeTPs[] = $minTtP;
+//
+//            if ($maxTtP > 0) {
+//                $perTradeTPs[] = $maxTtP;
+//            }
+
+//            $minTtP = (float) $item['trading_account_credential']['package']['per_trade_target_profit'];
+//            $maxTtP = (float) $item['trading_account_credential']['package']['max_per_trade_target_profit'];
+//
+//            if ($maxTtP > 0) {
+//                $limitAmounts['tp'][] = rand($minTtP, $maxTtP);
+//            } else {
+//                $limitAmounts['tp'][] = $minTtP;
+//            }
+
+//            if ($maxSlP > 0) {
+//                if (!$randPerTradeTpSl) {
+//                    $initRandPerTradeTpSl = rand($minSlP, $maxSlP);
+//                    $randPerTradeTpSl = $initRandPerTradeTpSl;
+//                    $limitAmounts['tp'][] = $initRandPerTradeTpSl;
+//                } else {
+//                    $limitAmounts['tp'][] = $randPerTradeTpSl;
+//                }
+//            } else {
+//                $limitAmounts['tp'][] = $minSlP;
+//            }
+
+            if ($isCrossPhase) {
+                $maxTtP = (float) $item['trading_account_credential']['package']['max_per_trade_target_profit'];
+                if ($maxTtP > 0) {
+                    $minTtP = (float) $item['trading_account_credential']['package']['per_trade_target_profit'];
+                    $limitAmounts['tp'][] = rand($minTtP, $maxTtP);
+                } else {
+                    $limitAmounts['tp'][] = $item['trading_account_credential']['package']['per_trade_target_profit'];
+                }
+            } else {
+                $limitAmounts['tp'][] = $handlerRandTtP;
+            }
+
+
             $limitAmounts['tp'][] = $item['trading_account_credential']['package']['daily_target_profit'];
-            $limitAmounts['tp'][] = getRemainingDailyTargetProfit($item);
-            $limitAmounts['tp'][] = getRemainingTargetProfit($item) + 80;
+            $remainingDailyTp = getRemainingDailyTargetProfit($item);
+
+            $limitAmounts['tp'][] = $remainingDailyTp + 100;
+            $remainingTp = getRemainingTargetProfit($item);
+            $limitAmounts['tp'][] = $remainingTp + 100;
+
+//            info(print_r([
+//                '$remainingDailyTp' => $remainingDailyTp,
+//                '$remainingTp' => $remainingTp
+//            ], true));
+
+//            $remainingTps[] = $remainingTp;
 
             $tp = (float) min($limitAmounts['tp']);
             $sl = (float) min($limitAmounts['sl']);
@@ -131,6 +251,10 @@ class PairLimitsController extends Controller
             $sortedLimits[] = $limits[$itemId];
         }
 
+//        info(print_r([
+//            '$sortedLimits' => $sortedLimits
+//        ], true));
+
         return $sortedLimits;
     }
 
@@ -145,30 +269,26 @@ class PairLimitsController extends Controller
 
     public function convertUnitsToLots($amount, $equity, $lots = 0)
     {
-//        info(print_r([
-//            'convertUnitsToLots' => [
-//                'amount' => $amount,
-//                'equity' => $equity,
-//                'lots' => $lots
-//            ]
-//        ], true));
+        $fiftyKMinLots = 1.3;
+        $fiftyKMaxLots = 1.5;
 
-        $minLots = 1.3;
-        $maxLots = 1.5;
-        $minVal = 650;
-        $maxVal = 750;
-
-        $ticks = rand($minVal, $maxVal);
+        $ticks = rand($this->forexMinSl, $this->forexMaxSl);
 
         if (!$lots) {
             $lots = (float) $amount / $ticks;
             $lots = floor($lots * 100) / 100;
             $lots = number_format($lots, 2);
 
-            if ($equity <= 50000 && $lots > $maxLots) {
-                $lots = $this->randomFloat($minLots, $maxLots);
+            if ($equity <= 50000 && $lots > $fiftyKMaxLots) {
+                $lots = $this->randomFloat($fiftyKMinLots, $fiftyKMaxLots);
                 $ticks = floor($amount / $lots);
             }
+
+            if ($equity >= 90000 && $lots > 3) {
+                $lots = 3;
+                $ticks = floor($amount / $lots);
+            }
+
         } else {
             $ticks = (float) $amount * (float) $lots;
         }
@@ -180,29 +300,6 @@ class PairLimitsController extends Controller
         ];
     }
 
-
-//    public function convertUnitsToLots($amount, $equity, $lots = 0)
-//    {
-//        $minLots = 1.3;
-//        $maxLots = 1.5;
-//
-//        if ($equity > 50000) {
-//            $minLots = 2.3;
-//            $maxLots = 2.5;
-//        }
-//
-//        if (!$lots) {
-//            $lots = $this->randomFloat($minLots, $maxLots);
-//        }
-//        $ticks = floor($amount / $lots);
-//
-//        return [
-//            'ticks' => $ticks,
-//            'lots' => $lots,
-//            'amount' => $ticks * $lots
-//        ];
-//    }
-
     public function scaleDownFunderPro($itemIds, $pairLimits, $limits)
     {
         $ratio = $this->getFunderRatio($itemIds);
@@ -211,83 +308,177 @@ class PairLimitsController extends Controller
             return $limits;
         }
 
-        $lowestVal = 99999;
-        $endRatio = max($ratio);
-        $baseRatio = 0;
+        $minLimits = [];
+        foreach ($pairLimits as $item) {
+            $key = $item['funder'] . "_" . $item['phase'];
+            $minValue = min($item['tp'], $item['sl']);
+            $minLimits[$key] = $minValue;
+        }
 
-//        $pair1Key = $pairLimits[0]['funder'] .'_'. $pairLimits[0]['phase'];
-//        $pair2Key = $pairLimits[1]['funder'] .'_'. $pairLimits[1]['phase'];
+        $ratioOperator = [];
+        $keys = array_keys($minLimits);
+
+        if (count($keys) == 2) {
+            $key1 = $keys[0]; // e.g., fpro_phase-2
+            $key2 = $keys[1]; // e.g., gff_phase-2
+
+            $ratio1 = $ratio[$key1];
+            $ratio2 = $ratio[$key2];
+
+            // Ensuring the pair with the higher ratio stays intact
+            if ($ratio1 > $ratio2) {
+                $higherRatioKey = $key1;
+                $lowerRatioKey = $key2;
+            } else {
+                $higherRatioKey = $key2;
+                $lowerRatioKey = $key1;
+            }
+
+            $higherRatioValue = $minLimits[$higherRatioKey];
+            $lowerRatioValue = $minLimits[$lowerRatioKey];
+            $higherRatio = $ratio[$higherRatioKey];
+            $lowerRatio = $ratio[$lowerRatioKey];
+
+            // Compute values to maintain the ratio
+            if ($lowerRatioValue * ($higherRatio / $lowerRatio) > $higherRatioValue) {
+                $ratioOperator[$higherRatioKey] = "same";
+                $ratioOperator[$lowerRatioKey] = "divide";
+            } else {
+                $ratioOperator[$higherRatioKey] = "same";
+                $ratioOperator[$lowerRatioKey] = "multiply";
+            }
+        }
+
+        foreach ($limits as $id => $limitItem) {
+            $limitName = $limitItem['funder'] .'_'. $limitItem['phase'];
+            $lots = (float) $limitItem['tp']['lots'];
+
+            if ($ratioOperator[$limitName] === 'divide') {
+                $lots = $lots / 2;
+            } elseif ($ratioOperator[$limitName] === 'multiply') {
+                $lots = $lots * 2;
+            }
+
+            $limits[$id]['tp']['lots'] = $lots;
+            $limits[$id]['sl']['lots'] = $lots;
+
+            $limits[$id]['tp']['amount'] = $lots * (float) $limits[$id]['tp']['ticks'];
+            $limits[$id]['sl']['amount'] = $lots * (float) $limits[$id]['sl']['ticks'];
+            
+            if ($limitItem['funder'] === 'pipf') {
+                $limits[$id]['tp']['amount'] = $limits[$id]['tp']['amount'] * 100;
+                $limits[$id]['sl']['amount'] = $limits[$id]['sl']['amount'] * 100;
+            }
+        }
+
+        return $limits;
+    }
+
+//    public function scaleDownFunderPro($itemIds, $pairLimits, $limits)
+//    {
+//        $ratio = $this->getFunderRatio($itemIds);
 //
-//        $pair1MinVal = (float) min($pairLimits[0]['tp'], $pairLimits[0]['sl']);
-//        $pair2MinVal = (float) min($pairLimits[1]['tp'], $pairLimits[1]['sl']);
+//        if (!$ratio) {
+//            return $limits;
+//        }
 //
-//        if ($ratio[$pair1Key] > 1) {
-//            if ($pair1MinVal >= ($pair2MinVal * $endRatio)) {
-//                $lowestValPair = [
-//                    $pair2Key => (int) $ratio[$pair2Key]
-//                ];
-//            } else {
-//                $lowestValPair = [
-//                    $pair1Key => (int) $ratio[$pair1Key]
-//                ];
-//            }
-//        } else {
-//            if ($pair2MinVal >= ($pair1MinVal * $endRatio)) {
-//                $lowestValPair = [
-//                    $pair1Key => (int) $ratio[$pair1Key]
-//                ];
-//            } else {
-//                $lowestValPair = [
-//                    $pair2Key => (int) $ratio[$pair2Key]
-//                ];
+//        $lowestVal = 99999;
+//        $endRatio = max($ratio);
+//        $baseRatio = 0;
+//
+////        $pair1Key = $pairLimits[0]['funder'] .'_'. $pairLimits[0]['phase'];
+////        $pair2Key = $pairLimits[1]['funder'] .'_'. $pairLimits[1]['phase'];
+////
+////        $pair1MinVal = (float) min($pairLimits[0]['tp'], $pairLimits[0]['sl']);
+////        $pair2MinVal = (float) min($pairLimits[1]['tp'], $pairLimits[1]['sl']);
+////
+////        if ($ratio[$pair1Key] > 1) {
+////            if ($pair1MinVal >= ($pair2MinVal * $endRatio)) {
+////                $lowestValPair = [
+////                    $pair2Key => (int) $ratio[$pair2Key]
+////                ];
+////            } else {
+////                $lowestValPair = [
+////                    $pair1Key => (int) $ratio[$pair1Key]
+////                ];
+////            }
+////        } else {
+////            if ($pair2MinVal >= ($pair1MinVal * $endRatio)) {
+////                $lowestValPair = [
+////                    $pair1Key => (int) $ratio[$pair1Key]
+////                ];
+////            } else {
+////                $lowestValPair = [
+////                    $pair2Key => (int) $ratio[$pair2Key]
+////                ];
+////            }
+////        }
+////
+//
+//        $lowestValPair = [];
+//
+//        foreach ($pairLimits as $item) {
+//            $minVal = (float) min($item['tp'], $item['sl']);
+//            $ratioName = $item['funder'] .'_'. $item['phase'];
+//            $itemRatio = $ratio[$ratioName];
+//
+//            if ($minVal <= $lowestVal) {
+//                if (empty($lowestValPair)) {
+//                    $lowestValPair = [
+//                        $ratioName => (int) $ratio[$ratioName]
+//                    ];
+//                    $lowestVal = $minVal;
+//                } else {
+//                    if ($itemRatio > 1) {
+//                        $lowestValPair = [
+//                            $ratioName => (int) $ratio[$ratioName]
+//                        ];
+//                        $lowestVal = $minVal;
+//                    }
+//                }
 //            }
 //        }
 //
-
-        foreach ($pairLimits as $item) {
-            $minVal = (float) min($item['tp'], $item['sl']);
-            if ($minVal < $lowestVal) {
-                $lowestValPair = [
-                    $item['funder'] .'_'. $item['phase'] => (int) $ratio[$item['funder'] .'_'. $item['phase']]
-                ];
-                $lowestVal = $minVal;
-            }
-        }
-
-
-
+//
+//
 //        info(print_r([
 //            '$ratio' => $ratio,
+//            '$lowestVal' => $lowestVal,
+//            '$lowestValPair' => $lowestValPair,
 //            '$pairLimits' => $pairLimits,
 //            'limits' => $limits
 //        ], true));
-
-        foreach ($limits as $id => $limitItem) {
-            if (isset($lowestValPair[$limitItem['funder'] .'_'. $limitItem['phase']])) {
-                $baseRatio = $lowestValPair[$limitItem['funder'] .'_'. $limitItem['phase']];
-            } else {
-                if ($baseRatio > 1) {
-                    $lots = (float) $limitItem['tp']['lots'] / $endRatio;
-                } else {
-                    $lots = (float) $limitItem['tp']['lots'] * $endRatio;
-                }
-                $limits[$id]['tp']['lots'] = $lots;
-                $limits[$id]['sl']['lots'] = $lots;
-            }
-        }
-
+//
+//        foreach ($limits as $id => $limitItem) {
+//            if (isset($lowestValPair[$limitItem['funder'] .'_'. $limitItem['phase']])) {
+//                $baseRatio = $lowestValPair[$limitItem['funder'] .'_'. $limitItem['phase']];
+//            } else {
+//                if ($baseRatio > 1) {
+//                    $lots = (float) $limitItem['tp']['lots'] / $endRatio;
+//                } else {
+//                    $lots = (float) $limitItem['tp']['lots'] * $endRatio;
+//                }
+//                $limits[$id]['tp']['lots'] = $lots;
+//                $limits[$id]['sl']['lots'] = $lots;
+//            }
+//        }
+//
 //        info(print_r([
 //            'ratio' => $ratio,
 //            '$lowestValPair' => $lowestValPair,
 //            '$lowestVal' => $lowestVal,
 //            '$baseRatio' => $baseRatio,
 //        ], true));
-
-        return $limits;
-    }
+//
+//        return $limits;
+//    }
 
     public function calculateFproCrossPhaseLimits($pairLimits)
     {
+//        info(print_r([
+//            'calculateFproCrossPhaseLimits' => $pairLimits
+//        ], true));
+
         $stopLossAllowance = 25;
         $phase2MinAmnt = 0;
         $phase3MinAmnt = 0;
@@ -322,7 +513,10 @@ class PairLimitsController extends Controller
 
             $baseLimits = $this->getBestOrderAmountTicksRatio($maxNum);
             $baseLimits = $this->convertUnitsToLots($baseLimits['amount'], min($equities));
-
+//            info(print_r([
+//                '$maxNum' => $maxNum,
+//                '$baseLimits' => $baseLimits
+//            ], true));
             $slTicks = (float) $baseLimits['ticks'];
             $tpTicks = $slTicks - 20;
             $lots = (float) $baseLimits['lots'];
@@ -373,6 +567,10 @@ class PairLimitsController extends Controller
             $this->items[0]['trading_account_credential']['package']['current_phase'] !== $this->items[1]['trading_account_credential']['package']['current_phase']) {
             return $this->calculateFproCrossPhaseLimits($pairLimits);
         }
+
+//        info(print_r([
+//            'getLimits' => $pairLimits
+//        ], true));
 
         $itemIds = [];
 
@@ -466,7 +664,17 @@ class PairLimitsController extends Controller
         $ratio = [
             'fpro_phase-2_upft_phase-2' => '1:2',
             'fpro_phase-2_gff_phase-2' => '1:2',
+
             'fpro_phase-3_fpro_phase-2' => '1:4',
+            'fpro_phase-3_upft_phase-3' => '1:2',
+            'fpro_phase-3_gff_phase-3' => '1:2',
+
+            'pipf_phase-2_upft_phase-2' => '1:2',
+            'pipf_phase-2_gff_phase-2' => '1:2',
+
+            'pipf_phase-3_pipf_phase-2' => '1:4',
+            'pipf_phase-3_upft_phase-3' => '1:2',
+            'pipf_phase-3_gff_phase-3' => '1:2',
         ];
 
         $pckg_1 = $itemIds[0]['trading_account_credential']['package'];
@@ -504,45 +712,6 @@ class PairLimitsController extends Controller
 
         return false;
     }
-
-//    public function scaleDownFunderPro($itemIds, $pairLimits, $limits)
-//    {
-//        $funders = [
-//            $itemIds[0]['trading_account_credential']['package']['funder']['alias'],
-//            $itemIds[1]['trading_account_credential']['package']['funder']['alias']
-//        ];
-//
-//        $hasFpro = $this->hasSpecificCrossFunder($funders, 'fpro');
-//
-//        if ($hasFpro === false) {
-//            return $limits;
-//        }
-//
-//        $fproKey = $hasFpro;
-//        $nonFproKey = ($fproKey === 0)? 1 : 0;
-//
-//        $nonFproLots = $limits[$itemIds[$nonFproKey]['id']]['tp']['lots'];
-//        $nonFproTp = $limits[$itemIds[$nonFproKey]['id']]['tp']['ticks'];
-//        $nonFproSL = $limits[$itemIds[$nonFproKey]['id']]['sl']['ticks'];
-//
-//        $fproLots = $nonFproLots;
-//
-//        if ($itemIds[0]['trading_account_credential']['package']['current_phase'] !== 'phase-3') {
-//            $fproLots = $nonFproLots / 2;
-//        }
-//
-//        $fproLots = $fproLots / 10;
-//
-//        $limits[$itemIds[$fproKey]['id']]['tp']['lots'] = $fproLots;
-//        $limits[$itemIds[$fproKey]['id']]['tp']['ticks'] = $nonFproTp * 10;
-//        $limits[$itemIds[$fproKey]['id']]['tp']['amount'] = ($nonFproTp * 10) * $fproLots;
-//
-//        $limits[$itemIds[$fproKey]['id']]['sl']['lots'] = $fproLots;
-//        $limits[$itemIds[$fproKey]['id']]['sl']['ticks'] = $nonFproSL * 10;
-//        $limits[$itemIds[$fproKey]['id']]['sl']['amount'] = ($nonFproSL * 10) * $fproLots;
-//
-//        return $limits;
-//    }
 
     public function hasSpecificCrossFunder($funders, $funder)
     {
@@ -660,6 +829,19 @@ class PairLimitsController extends Controller
             $limits[$pairLimits[1]['id']]['tp']['amount'] = $item2Tp * $lots;
             $limits[$pairLimits[1]['id']]['sl']['ticks'] = $item2Sl;
             $limits[$pairLimits[1]['id']]['sl']['amount'] = $item2Sl * $lots;
+        }
+
+        foreach ($limits as $itemId => $limitItem) {
+            if ($limitItem['funder'] === 'pipf') {
+                $newTpTick = (float) $limitItem['tp']['ticks'] / 100;
+                $newTpTick = floor($newTpTick * 100) / 100;
+
+                $newSlTick = (float) $limitItem['sl']['ticks'] / 100;
+                $newSlTick = floor($newSlTick * 100) / 100;
+
+                $limits[$itemId]['tp']['ticks'] = number_format($newTpTick, 2, '.', '');
+                $limits[$itemId]['sl']['ticks'] = number_format($newSlTick, 2, '.', '');
+            }
         }
 
         return $limits;

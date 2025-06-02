@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\TradePair;
 use App\Models\TradeQueueModel;
 use App\Models\TradeReport;
+use App\Models\TradingAccountCredential;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -16,7 +17,7 @@ class TradeReportController extends Controller
         $trades = TradeQueueModel::where('account_id', auth()->user()->account_id)
             ->where('status', 'closed')
             ->orderBy('updated_at', 'desc')
-            ->limit(50)
+            ->limit(200)
             ->get();
 
         if (empty($trades)) {
@@ -104,6 +105,10 @@ class TradeReportController extends Controller
 
         if ($request->get('ids')) {
             $items->whereIn('id', $data['ids']);
+        }
+
+        if ($request->get('statusNotIn')) {
+//            $items->whereNotIn('status', $request->get('statusNotIn'));
         }
 
         if ($request->get('raw')) {
@@ -276,8 +281,14 @@ class TradeReportController extends Controller
                 return response()->json(['errors' => __('Unable to find trade report.')]);
             }
 
-            if ($data['starting_daily_equity'] != $data['latest_equity']) {
-//                TradeController::recordTradeHistory($item, $data['latest_equity']);
+//            if ($data['starting_daily_equity'] != $data['latest_equity']) {
+////                TradeController::recordTradeHistory($item, $data['latest_equity']);
+//            }
+
+            if ($item->status === 'breachedcheck' && $data['status'] === 'breached') {
+                $tradeAccount = TradingAccountCredential::where('id', $item->trade_account_credential_id)->first();
+                $tradeAccount->status = 'inactive';
+                $tradeAccount->update();
             }
 
             $item->fill($data);

@@ -301,6 +301,33 @@ class TradePairAccountsController extends Controller
 //        return $distance;
 //    }
 
+    public function getAccountActivityCount()
+    {
+        $unitActivityCounts = [];
+
+        $tradeQueue = TradeQueueModel::where('account_id', auth()->user()->account_id)
+            ->whereIn('status', ['trading', 'pairing', 'error'])
+            ->get()
+            ->map(function ($item) {
+                $item->data = maybe_unserialize($item->data);
+                return $item;
+            });
+
+        if (!empty($tradeQueue)) {
+            foreach ($tradeQueue as $item) {
+                foreach ($item->data as $itemData) {
+                    if (isset($unitActivityCounts[$itemData['unit_id']])) {
+                        $unitActivityCounts[$itemData['unit_id']] += 1;
+                    } else {
+                        $unitActivityCounts[$itemData['unit_id']] = 1;
+                    }
+                }
+            }
+        }
+
+        return response()->json($unitActivityCounts);
+    }
+
     public function getQueuedItems()
     {
         $queueItems = TradeQueueModel::where('account_id', auth()->user()->account_id)
@@ -324,10 +351,12 @@ class TradePairAccountsController extends Controller
                 'queue_id' => $item->queue_id,
                 'data' => maybe_unserialize($item->data),
                 'unit_ready' => maybe_unserialize($item->unit_ready),
+                'units_trading' => maybe_unserialize($item->units_trading),
                 'status' => $item->status,
                 'errors' => maybe_unserialize($item->errors),
                 'pair_status' => $item->pair_status,
-                'closed_items' => $item->closed_items
+                'created_at' => $item->created_at,
+                'closed_items' => maybe_unserialize($item->closed_items)
             ];
 
             if (in_array($item->status, $pairStatuses)) {

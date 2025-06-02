@@ -16,6 +16,7 @@ class TradingAccountCredential extends Controller
     {
         $credentials = TradingAccountCredentialModel::with(['package', 'package.funder', 'userAccount.tradingUnit', 'tradeReports'])
             ->where('account_id', auth()->user()->account_id)
+            ->orderBy('created_at', 'desc')
             ->get();
 
         return response()->json($credentials);
@@ -136,6 +137,12 @@ class TradingAccountCredential extends Controller
 
             if (!$update) {
                 return response()->json(['errors' => __('Failed to update credential.')]);
+            }
+
+            if ($data['status'] !== 'inactive') {
+                $tradeItem = TradeReport::where('trade_account_credential_id', $id)->first();
+                $tradeItem->status = 'onhold';
+                $tradeItem->update();
             }
 
             return response()->json(['message' => __('Successfully updated credential.')]);

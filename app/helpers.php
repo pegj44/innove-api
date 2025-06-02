@@ -37,10 +37,16 @@ function getRemainingTargetProfit($item)
     $package = $item['trading_account_credential']['package'];
     $targetProfit = $package['total_target_profit'];
     $totalPnL = (float) $item['latest_equity'] - $package['starting_balance'];
+    $startingBal = (float) $item['starting_daily_equity'];
+    $dailyPnL = (float) $item['latest_equity'] - $startingBal;
     $remainingTP = $targetProfit - $totalPnL;
     $remainingTP = round($remainingTP, 2);
 
-    return ($remainingTP <= 0 )? 200 : $remainingTP;
+    if ($dailyPnL == 0 && $remainingTP <= 0) {
+        return 200;
+    }
+
+    return ($remainingTP <= 200 )? 200 : $remainingTP;
 }
 
 

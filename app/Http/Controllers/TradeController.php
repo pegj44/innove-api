@@ -69,6 +69,14 @@ class TradeController extends Controller
         return response()->json($queueData);
     }
 
+    public function checkAccountBreached(Request $request)
+    {
+        $itemId = $request->get('itemId');
+        $tradeItem = TradeReport::where('id', $itemId)->first();
+
+
+    }
+
     public function tradeErrorReport(Request $request)
     {
         $itemId = $request->get('itemId');
@@ -103,13 +111,17 @@ class TradeController extends Controller
         $queueItem->update();
 
         $message = $request->get('message');
+        $errorCode = $request->get('err_code');
+        $action = ($errorCode === 'initialize_error')? 'trade-initialize-error' : $errorCode;
 
-        UnitResponse::dispatch(auth()->user()->account_id, [
-            'queue_db_id' => $tradeQueueId,
-            'itemId' => $itemId,
-            'message' => (!empty($message))? $message : __('Failed to initialize'),
-            'sound' => false,
-        ], 'trade-initialize-error');
+        if (!empty($action)) {
+            UnitResponse::dispatch(auth()->user()->account_id, [
+                'queue_db_id' => $tradeQueueId,
+                'itemId' => $itemId,
+                'message' => (!empty($message))? $message : __('Failed to initialize'),
+                'sound' => true,
+            ], $action);
+        }
 
         return response()->json($queueItem);
     }
@@ -151,6 +163,67 @@ class TradeController extends Controller
         ], 'stop-trade', $matchPairData['platform_type'], $matchPairData['unit_id']);
     }
 
+    public function updateQueueReport(string $queueId, string $itemId)
+    {
+        $queueItem = TradeQueueModel::where('id', $queueId)
+            ->first();
+
+        if (empty($queueItem)) {
+            return response()->json(['error' => __('Pair queue not found.')]);
+        }
+
+        $queueData = maybe_unserialize($queueItem->data);
+        $tradeItem = TradeReport::where('id', $itemId)->first();
+
+        if (!empty($queueData[$itemId]['new_equity']) && $queueData[$itemId]['latest_equity'] != $queueData[$itemId]['new_equity']) {
+            return response()->json(['message' => __('Trade history is already updated.')]);
+        }
+
+        if ($queueData[$itemId]['latest_equity'] == $tradeItem->latest_equity) {
+            return response()->json(['message' => __('Trade item equity is not yet updated.')]);
+        }
+
+        $queueData[$itemId]['new_equity'] = $tradeItem->latest_equity;
+
+        $queueItem->data = maybe_serialize($queueData);
+        $queueItem->update();
+
+        return response()->json(['message' => __('Successfully updated history item.')]);
+    }
+
+    public function reportTradeStarted(Request $request)
+    {
+        $queueItem = TradeQueueModel::where('account_id', auth()->user()->account_id)
+            ->where('id', $request->get('queue_id'))
+            ->first();
+
+        if (empty($queueItem)) {
+            return response()->json(['error' => __('Pair queue not found.')]);
+        }
+
+        $unitsTrading = [];
+
+        if (!empty($queueItem->units_trading)) {
+            $unitsTrading = maybe_unserialize($queueItem->units_trading);
+        }
+
+        $currentDateTime = Carbon::now('Asia/Manila');
+//        $dateTime = $currentDateTime->format('F j, Y g:i:s A');
+        $dateTime = $currentDateTime->timestamp;
+        $unitsTrading[$request->get('itemId')] = $dateTime;
+
+        $queueItem->units_trading = maybe_serialize($unitsTrading);
+        $queueItem->update();
+
+        WebPush::dispatch(auth()->user()->account_id, [
+            'queueId' => $request->get('queue_id'),
+            'unitId' => $request->get('itemId'),
+            'dateTime' => $dateTime
+        ], 'unit-trade-started');
+
+        return response()->json($unitsTrading);
+    }
+
     /**
      * Let the pair know the trade is closed.
      * @param Request $request
@@ -172,12 +245,26 @@ class TradeController extends Controller
         $matchPairId = array_keys($queueData);
         $closedItems = (!empty($queueItem->closed_items))? maybe_unserialize($queueItem->closed_items) : [];
 
-        if (in_array($matchPairId[0], $closedItems)) {
-            return false; // Pair already closed, not need to report.
-        }
+        $currentDateTime = Carbon::now('Asia/Manila');
+        $dateTime = $currentDateTime->timestamp;
 
-        $queueItem->closed_items = maybe_serialize([$request->get('itemId')]); // save closed item.
+        $closedItems[$request->get('itemId')] = $dateTime;
+
+        $queueItem->closed_items = maybe_serialize($closedItems); // save closed item.
         $queueItem->update();
+
+        WebPush::dispatch(auth()->user()->account_id, [
+            'queueId' => $request->get('queue_id'),
+            'unitId' => $request->get('itemId'),
+            'dateTime' => $dateTime
+        ], 'unit-trade-closed');
+
+        if (isset($closedItems[$matchPairId[0]])) {
+            return false;
+        }
+//        if (isset($matchPairId[0], $closedItems)) {
+//            return false; // Pair already closed, not need to report.
+//        }
 
         $matchPairData = $queueData[$matchPairId[0]];
 
@@ -433,31 +520,6 @@ class TradeController extends Controller
             }
         }
 
-//        if (!empty($dailyDrawdown)) {
-//            $positiveThreshold = $dailyDrawdown * 0.9;
-//            $negativeThreshold = -$dailyDrawdown * 0.9;
-//
-//            info(print_r([
-//                'tradeReport' => [
-//                    'funder' => (!empty($tradeAccount['trading_account_credential']['funder_account_id']))? $tradeAccount['trading_account_credential']['funder_account_id'] : 'no funder',
-//                    '$dailyDrawdown' => $dailyDrawdown,
-//                    '$positiveThreshold' => $positiveThreshold,
-//                    '$negativeThreshold' => $negativeThreshold,
-//                    '$pnl' => $pnl,
-//                    'isAbstained' => ($pnl >= $positiveThreshold || $pnl <= $negativeThreshold)
-//                ]
-//            ], true));
-//
-//            if ($pnl >= $positiveThreshold || $pnl <= $negativeThreshold) {
-//                return 'abstained';
-//            }
-//
-//        } else {
-//            if ($pnl >= ($dailyTp / 2)) {
-//                return 'abstained';
-//            }
-//        }
-
         return 'idle';
     }
 
@@ -481,6 +543,11 @@ class TradeController extends Controller
 
         $readyUnits = array_unique($readyUnits);
         $queueItem->unit_ready = maybe_serialize($readyUnits);
+
+        UnitResponse::dispatch(auth()->user()->account_id, [
+            'queue_db_id' => $queueItem->id,
+            'itemId' => $request->get('itemId')
+        ], 'unit-ready');
 
         if (count($readyUnits) > 1) {
             $queueItem->status = 'pairing';
@@ -569,7 +636,9 @@ class TradeController extends Controller
                 'symbol' => $package->getSymbol(),
                 'order_amount' => $pairLimits[$item['id']]['tp']['lots'],
                 'tp' => $pairLimits[$item['id']]['tp']['ticks'],
+                'convertedTp' => $pairLimits[$item['id']]['tp']['amount'],
                 'sl' => $pairLimits[$item['id']]['sl']['ticks'],
+                'convertedSl' => $pairLimits[$item['id']]['sl']['amount'],
                 'remaining_target_profit' => getRemainingTargetProfit($item),
                 'daily_target_profit' => $dailyTargetProfit,
                 'asset_type' => $package->getAssetType(),
@@ -707,6 +776,8 @@ class TradeController extends Controller
 
             $purchaseType = (!empty($purchaseTypeOverrides[$unitId]))? $purchaseTypeOverrides[$unitId] : $unitItem['purchase_type'];
 
+            $formattedTime = Carbon::now()->format('M. d, Y g:i:s a');
+
             $args = [
                 'year' => $futureTime->format('Y'),
                 'month' => $futureTime->format('m'),
@@ -724,6 +795,7 @@ class TradeController extends Controller
                     'alias' => $unitItem['funder'],
                     'theme' => $unitItem['funder_theme']
                 ],
+                'timeTradeSent' => $formattedTime,
                 'account_id' => $unitItem['funder_account_id_long'],
                 'account_id_short' => $unitItem['funder_account_id_short'],
                 'loginUsername' => $unitItem['login_username'],
