@@ -134,6 +134,10 @@ class AuthenticatedSessionController extends Controller
             }
 
             $data = [
+                'PUSHER_APP_ID' => env('PUSHER_APP_ID'),
+                'PUSHER_APP_KEY' => env('PUSHER_APP_KEY'),
+                'PUSHER_APP_SECRET' => env('PUSHER_APP_SECRET'),
+                'PUSHER_APP_CLUSTER' => env('PUSHER_APP_CLUSTER'),
                 'token' => $userToken,
                 'userId' => $token->tokenable->id,
                 'name' => $token->tokenable->name,
@@ -156,6 +160,10 @@ class AuthenticatedSessionController extends Controller
             $newToken = $user->createToken($tokenName, ['unit'])->plainTextToken;
 
             $data = [
+                'PUSHER_APP_ID' => env('PUSHER_APP_ID'),
+                'PUSHER_APP_KEY' => env('PUSHER_APP_KEY'),
+                'PUSHER_APP_SECRET' => env('PUSHER_APP_SECRET'),
+                'PUSHER_APP_CLUSTER' => env('PUSHER_APP_CLUSTER'),
                 'token' => $newToken,
                 'userId' => $user->id,
                 'name' => $user->name,
