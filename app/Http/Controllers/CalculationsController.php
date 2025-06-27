@@ -32,9 +32,6 @@ class CalculationsController extends Controller
         $funderConfigKey = $funderAlias .'_'. $item['trading_account_credential']['package']['current_phase'];
 
         if (!isset($limitConfig['marginLimits'][$funderConfigKey])) {
-            info(print_r([
-                'calculateForexMarginLimit_notset' => $funderConfigKey,
-            ], true));
             return null;
         }
 
@@ -58,61 +55,6 @@ class CalculationsController extends Controller
         $max_lots = floor($max_margin_allowed / $margin_required_per_lot * 100) / 100; // rounded down to 2 decimals
 
         return $max_lots * (float) $limitConfig['forexTicksRange']['max'];
-    }
-
-    public static function calculateForexMarginLimit_old($item, $current_price, $limitConfig)
-    {
-        info(print_r([
-            'calculateForexMarginLimit_1' => $item,
-        ], true));
-
-        $lots = (float) $item['tp']['lots'];
-        $starting_balance = $item['starting_balance'];
-        $leverage = (int) $limitConfig['leverage'];
-        $margin_cap_percent = (float) $limitConfig['limit'];
-        $contract_size = 100;
-
-        // Calculate max margin allowed
-        $max_margin_allowed = ($starting_balance * $margin_cap_percent) / 100;
-
-        // Margin required per 1 lot
-        $position_size_per_lot = $contract_size * $current_price; // USD value per lot
-        $margin_required_per_lot = $position_size_per_lot / $leverage;
-
-        // Max lots allowed (without exceeding cap)
-        $max_lots = floor($max_margin_allowed / $margin_required_per_lot * 100) / 100; // rounded down to 2 decimals
-
-        if ($lots >= $max_lots) {
-
-            $item['tp']['lots'] = $max_lots;
-            $item['sl']['lots'] = $max_lots;
-
-            $newTpTicks = (float) $item['tp']['amount'] / $max_lots;
-            $newSlTicks = (float) $item['sl']['amount'] / $max_lots;
-
-            $item['tp']['ticks'] = floor($newTpTicks * 100) / 100;
-            $item['sl']['ticks'] = floor($newSlTicks * 100) / 100;
-        }
-
-        info(print_r([
-            'calculateForexMarginLimit_2' => $item,
-        ], true));
-
-//        // Calculate Total Position Size
-//        $totalOunces = (float) $item['tp']['lots'] * 100;
-//        $totalPositionSize = $totalOunces * (float) $price;
-//
-//        // Calculate Margin Used
-//        $marginUsed = $totalPositionSize / (int) $limitConfig['leverage'];
-//        $marginPercentage = ($marginUsed / (float) $item['starting_balance']) * 100;
-//
-//        if ($marginPercentage >= (float) $limitConfig['limit']) {
-//            info(print_r([
-//                'calculateForexMarginLimit' => 'Margin used is greater than limit. Margin used: ' . $marginPercentage . ' Limit: ' . $limitConfig['limit']
-//            ], true));
-//        }
-
-        return $item;
     }
 
     public static function calculateMgcMarginLimit($item, $price, $limitConfig)

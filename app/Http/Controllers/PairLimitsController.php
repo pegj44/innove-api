@@ -225,7 +225,112 @@ class PairLimitsController extends Controller
         ];
     }
 
-    public function scaleDownFunderPro($itemIds, $pairLimits, $limits)
+    public function convertToForexInputs($lots, $ticks, $funder, $symbol = '')
+    {
+        $forexSymbols = TradeConfigController::get('forexSymbols');
+        $multipliers = TradeConfigController::get('multipliers');
+
+        if (!in_array($symbol, $forexSymbols)) {
+            return [
+                'lots' => $lots,
+                'ticks' => $ticks,
+                'amount' => $lots * $ticks,
+            ];
+        }
+
+        if (!isset($multipliers[$funder])) {
+
+            $lots = $lots / 10;
+            $ticks = $ticks * 10;
+
+            return [
+                'lots' => $lots,
+                'ticks' => $ticks,
+                'amount' => $lots * $ticks,
+            ];
+        }
+
+        $lotsMultiplier =  $multipliers[$funder]['lots']['value'];
+        $ticksMultiplier =  $multipliers[$funder]['ticks']['value'];
+
+        if ($multipliers[$funder]['lots']['multiply']) {
+            $lots = $lots * $lotsMultiplier;
+        } else {
+            $lots = $lots / $lotsMultiplier;
+        }
+
+        if ($multipliers[$funder]['ticks']['multiply']) {
+            $ticks = $ticks * $ticksMultiplier;
+            $amount = $lots * $ticks;
+        } else {
+            $ticks = $ticks / $ticksMultiplier;
+            $amount = $lots * ($ticks * 100);
+        }
+
+        return [
+            'lots' => $lots,
+            'ticks' => $ticks,
+            'amount' => $amount,
+        ];
+    }
+
+    public function divideLowestRatioLotsByTwo(&$limits, $pairLimits, $ratio): void
+    {
+        // Find the minimum ratio
+        $minRatio = min($ratio);
+        $maxRatio = max($ratio);
+        $minVal = 0;
+
+        // Get the max trade value of the higher ratio account.
+        foreach ($pairLimits as $pairLimit) {
+            $ratioKey = $pairLimit['funder'] .'_'. $pairLimit['phase'];
+            if ($ratio[$ratioKey] === $maxRatio ) {
+                $minVal = min($pairLimit['tp'], $pairLimit['sl']);
+            }
+        }
+
+        $calcLimit = $this->getBestOrderAmountTicksRatio($minVal);
+        $tpHandler = $calcLimit['ticks'];
+        $slHandler = $calcLimit['ticks'] + 2; // add 2 ticks of distance between sl and tp
+
+        if (($slHandler * $calcLimit['lots']) > $minVal) {
+            $slHandler = $calcLimit['ticks'];
+            $tpHandler = $slHandler - 2;
+        }
+
+        // Find items with the lowest ratio and divide their lots by 2
+        foreach ($limits as $id => &$limitItem) {
+            // Get funder and phase from the limit item
+            $funder = $limitItem['funder'];
+            $phase = $limitItem['phase'];
+            $ratioKey = $funder . '_' . $phase;
+
+            // Skip if ratio doesn't exist for this funder_phase combination
+            if (!isset($ratio[$ratioKey])) {
+                continue;
+            }
+
+            // If this item has the lowest ratio, divide lots by 2
+            if ($ratio[$ratioKey] === $minRatio) {
+                $lots = ($calcLimit['lots'] / 2);
+
+                $limitItem['tp'] = $this->convertToForexInputs($lots, $tpHandler, $limitItem['funder'], $limitItem['symbol']);
+                $limitItem['sl'] = $this->convertToForexInputs($lots, $slHandler, $limitItem['funder'], $limitItem['symbol']);
+            } else {
+                $lots = $calcLimit['lots'];
+
+                $limitItem['tp']['lots'] = $lots;
+                $limitItem['tp']['ticks'] = $tpHandler;
+                $limitItem['tp']['amount'] = $tpHandler * $lots;
+
+                $limitItem['sl']['lots'] = $lots;
+                $limitItem['sl']['ticks'] = $slHandler;
+                $limitItem['sl']['amount'] = $slHandler * $lots;
+            }
+        }
+    }
+
+    public function applyFunderRatio($itemIds, $pairLimits, &$limits)
     {
         $ratio = $this->getFunderRatio($itemIds);
 
@@ -233,66 +338,65 @@ class PairLimitsController extends Controller
             return $limits;
         }
 
-        $minLimits = [];
-        foreach ($pairLimits as $item) {
-            $key = $item['funder'] . "_" . $item['phase'];
-            $minValue = min($item['tp'], $item['sl']);
-            $minLimits[$key] = $minValue;
-        }
+        // Find the minimum ratio to use as baseline
+        $minRatio = min($ratio);
 
-        $ratioOperator = [];
-        $keys = array_keys($minLimits);
+        // Process each item in limits
+        foreach ($limits as $id => &$limitItem) {
+            // Get funder and phase from the limit item
+            $funder = $limitItem['funder'];
+            $phase = $limitItem['phase'];
+            $ratioKey = $funder . '_' . $phase;
 
-        if (count($keys) == 2) {
-            $key1 = $keys[0]; // e.g., fpro_phase-2
-            $key2 = $keys[1]; // e.g., gff_phase-2
-
-            $ratio1 = $ratio[$key1];
-            $ratio2 = $ratio[$key2];
-
-            // Ensuring the pair with the higher ratio stays intact
-            if ($ratio1 > $ratio2) {
-                $higherRatioKey = $key1;
-                $lowerRatioKey = $key2;
-            } else {
-                $higherRatioKey = $key2;
-                $lowerRatioKey = $key1;
+            // Skip if ratio doesn't exist for this funder_phase combination
+            if (!isset($ratio[$ratioKey])) {
+                continue;
             }
 
-            $higherRatioValue = $minLimits[$higherRatioKey];
-            $lowerRatioValue = $minLimits[$lowerRatioKey];
-            $higherRatio = $ratio[$higherRatioKey];
-            $lowerRatio = $ratio[$lowerRatioKey];
+            // Get the ratio for this item
+            $currentRatio = $ratio[$ratioKey];
 
-            // Compute values to maintain the ratio
-            if ($lowerRatioValue * ($higherRatio / $lowerRatio) > $higherRatioValue) {
-                $ratioOperator[$higherRatioKey] = "same";
-                $ratioOperator[$lowerRatioKey] = "divide";
-            } else {
-                $ratioOperator[$higherRatioKey] = "same";
-                $ratioOperator[$lowerRatioKey] = "multiply";
-            }
-        }
+            // Calculate the multiplier (ratio relative to minimum ratio)
+            $multiplier = $currentRatio / $minRatio;
 
-        foreach ($limits as $id => $limitItem) {
-            $limitName = $limitItem['funder'] .'_'. $limitItem['phase'];
-            $lots = (float) $limitItem['tp']['lots'];
-
-            if ($ratioOperator[$limitName] === 'divide') {
-                $lots = $lots / 2;
-            } elseif ($ratioOperator[$limitName] === 'multiply') {
-                $lots = $lots * 2;
+            // Find corresponding pairLimits item for validation
+            $pairLimitItem = null;
+            foreach ($pairLimits as $pairItem) {
+                if ($pairItem['funder'] === $funder && $pairItem['phase'] === $phase) {
+                    $pairLimitItem = $pairItem;
+                    break;
+                }
             }
 
-            $limits[$id]['tp']['lots'] = $lots;
-            $limits[$id]['sl']['lots'] = $lots;
+            // Calculate new values for both tp and sl
+            $newTpLots = isset($limitItem['tp']) ? $limitItem['tp']['lots'] * $multiplier : 0;
+            $newTpAmount = isset($limitItem['tp']) ? $newTpLots * $limitItem['tp']['ticks'] : 0;
+            $newSlLots = isset($limitItem['sl']) ? $limitItem['sl']['lots'] * $multiplier : 0;
+            $newSlAmount = isset($limitItem['sl']) ? $newSlLots * $limitItem['sl']['ticks'] : 0;
 
-            $limits[$id]['tp']['amount'] = $lots * (float) $limits[$id]['tp']['ticks'];
-            $limits[$id]['sl']['amount'] = $lots * (float) $limits[$id]['sl']['ticks'];
+            // Validation for higher ratio funders: check both tp and sl amounts
+            if ($currentRatio > $minRatio && $pairLimitItem !== null) {
+                $minTpSlLimit = min($pairLimitItem['tp'], $pairLimitItem['sl']);
 
-            if ($limitItem['funder'] === 'pipf') {
-                $limits[$id]['tp']['amount'] = $limits[$id]['tp']['amount'] * 100;
-                $limits[$id]['sl']['amount'] = $limits[$id]['sl']['amount'] * 100;
+                // Check if either tp or sl amount exceeds the limit
+                $tpExceedsLimit = isset($limitItem['tp']) && $newTpAmount > $minTpSlLimit;
+                $slExceedsLimit = isset($limitItem['sl']) && $newSlAmount > $minTpSlLimit;
+
+                if ($tpExceedsLimit || $slExceedsLimit) {
+                    // Validation failed - divide lowest ratio item's tp and sl lots by 2
+                    $this->divideLowestRatioLotsByTwo($limits, $pairLimits, $ratio);
+                } else {
+
+                    // Validation passed - update both tp and sl values
+                    if (isset($limitItem['tp'])) {
+                        $limitItem['tp']['lots'] = $newTpLots;
+                        $limitItem['tp']['amount'] = $newTpAmount;
+                    }
+                    if (isset($limitItem['sl'])) {
+                        $limitItem['sl']['lots'] = $newSlLots;
+                        $limitItem['sl']['amount'] = $newSlAmount;
+                    }
+                }
             }
         }
 
@@ -301,10 +405,6 @@ class PairLimitsController extends Controller
 
     public function calculateFproCrossPhaseLimits($pairLimits)
     {
-//        info(print_r([
-//            'calculateFproCrossPhaseLimits' => $pairLimits
-//        ], true));
-
         $stopLossAllowance = 25;
         $phase2MinAmnt = 0;
         $phase3MinAmnt = 0;
@@ -339,10 +439,7 @@ class PairLimitsController extends Controller
 
             $baseLimits = $this->getBestOrderAmountTicksRatio($maxNum);
             $baseLimits = $this->convertUnitsToLots($baseLimits['amount'], min($equities));
-//            info(print_r([
-//                '$maxNum' => $maxNum,
-//                '$baseLimits' => $baseLimits
-//            ], true));
+
             $slTicks = (float) $baseLimits['ticks'];
             $tpTicks = $slTicks - 20;
             $lots = (float) $baseLimits['lots'];
@@ -499,22 +596,26 @@ class PairLimitsController extends Controller
 
         $limits = $this->equalizeTpSL($itemIds, $pairLimits, $limits);
         $limits = $this->convertForexTpSl($itemIds, $pairLimits, $limits);
-        $limits = $this->scaleDownFunderPro($itemIds, $pairLimits, $limits);
-//        $limits = $this->applyMarginLimits($itemIds, $pairLimits, $limits);
+        $limits = $this->applyFunderRatio($itemIds, $pairLimits, $limits);
+
+//        $limits = $this->fixPipFAmount($limits);
 
         return $limits;
     }
 
-    public function applyMarginLimits($itemIds, $pairLimits, $limits)
+    /**
+     * Fix PipFarm amount in dollars value.
+     *
+     * @param $limits
+     * @return array
+     */
+    public function fixPipFAmount($limits)
     {
-        $prices = $this->getPrices();
-        $tradeConfig = TradeConfigController::get('marginLimits');
-
-        foreach ($limits as $id => $item) {
-            if (!isset($tradeConfig[$item['funder'] .'_'. $item['phase']]) || !isset($prices[$item['symbol']])) {
-                continue;
+        foreach ($limits as $id => $limitItem) {
+            if ($limitItem['funder'] === 'pipf') {
+                $limits[$id]['tp']['amount'] = $limitItem['tp']['amount'] * 100;
+                $limits[$id]['sl']['amount'] = $limitItem['sl']['amount'] * 100;
             }
-            $limits[$id] = CalculationsController::adjustLimitsByMarginCap($item, $prices[$item['symbol']], $tradeConfig[$item['funder'] .'_'. $item['phase']]);
         }
 
         return $limits;
@@ -522,21 +623,7 @@ class PairLimitsController extends Controller
 
     public function getFunderRatio($itemIds)
     {
-        $ratio = [
-            'fpro_phase-2_upft_phase-2' => '1:2',
-            'fpro_phase-2_gff_phase-2' => '1:2',
-
-            'fpro_phase-3_fpro_phase-2' => '1:4',
-            'fpro_phase-3_upft_phase-3' => '1:2',
-            'fpro_phase-3_gff_phase-3' => '1:2',
-
-            'pipf_phase-2_upft_phase-2' => '1:2',
-            'pipf_phase-2_gff_phase-2' => '1:2',
-
-            'pipf_phase-3_pipf_phase-2' => '1:4',
-            'pipf_phase-3_upft_phase-3' => '1:2',
-            'pipf_phase-3_gff_phase-3' => '1:2',
-        ];
+        $ratio = TradeConfigController::get('ratio');
 
         $pckg_1 = $itemIds[0]['trading_account_credential']['package'];
         $pckg_2 = $itemIds[1]['trading_account_credential']['package'];
@@ -551,8 +638,8 @@ class PairLimitsController extends Controller
 
             if ($key === $search1) {
                 $funderRatio = [
-                    $fndr_1 .'_'. $pckg_1['current_phase'] => $val[0],
-                    $fndr_2 .'_'. $pckg_2['current_phase'] => $val[1]
+                    $fndr_1 .'_'. $pckg_1['current_phase'] => (int) $val[0],
+                    $fndr_2 .'_'. $pckg_2['current_phase'] => (int) $val[1]
                 ];
 
                 asort($funderRatio);
@@ -562,8 +649,8 @@ class PairLimitsController extends Controller
             if ($key === $search2) {
 
                 $funderRatio = [
-                    $fndr_1 .'_'. $pckg_1['current_phase'] => $val[1],
-                    $fndr_2 .'_'. $pckg_2['current_phase'] => $val[0]
+                    $fndr_1 .'_'. $pckg_1['current_phase'] => (int) $val[1],
+                    $fndr_2 .'_'. $pckg_2['current_phase'] => (int) $val[0]
                 ];
 
                 asort($funderRatio);
