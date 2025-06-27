@@ -17,5 +17,43 @@
     "forexTicksRange": {
         "min": 900,
         "max": 980
+    },
+    "ratio":{
+        "fpro_phase-2_upft_phase-2": "1:2",
+        "fpro_phase-2_gff_phase-2": "1:2",
+
+        "fpro_phase-3_fpro_phase-2": "1:4",
+        "fpro_phase-3_upft_phase-3": "1:2",
+        "fpro_phase-3_gff_phase-3": "1:2",
+
+        "pipf_phase-2_upft_phase-2": "1:2",
+        "pipf_phase-2_gff_phase-2": "1:2",
+
+        "pipf_phase-3_pipf_phase-2": "1:4",
+        "pipf_phase-3_upft_phase-3": "1:2",
+        "pipf_phase-3_gff_phase-3": "1:2"
+    },
+    "forexSymbols": ["xauusd"],
+    "multipliers": {
+        "fpro": {
+            "lots": {
+                "multiply": false,
+                "value": 10
+            },
+            "ticks": {
+                "multiply": true,
+                "value": 10
+            }
+        },
+        "pipf": {
+            "lots": {
+                "multiply": false,
+                "value": 10
+            },
+            "ticks": {
+                "multiply": false,
+                "value": 10
+            }
+        }
     }
 }
