@@ -228,7 +228,7 @@ class PairLimitsController extends Controller
     public function convertToForexInputs($lots, $ticks, $funder, $symbol = '')
     {
         $forexSymbols = TradeConfigController::get('forexSymbols');
-        $multipliers = TradeConfigController::get('multipliers');
+//        $multipliers = TradeConfigController::get('multipliers');
 
         if (!in_array($symbol, $forexSymbols)) {
             return [
@@ -238,7 +238,7 @@ class PairLimitsController extends Controller
             ];
         }
 
-        if (!isset($multipliers[$funder])) {
+//        if (!isset($multipliers[$funder])) {
 
             $lots = $lots / 10;
             $ticks = $ticks * 10;
@@ -248,30 +248,30 @@ class PairLimitsController extends Controller
                 'ticks' => $ticks,
                 'amount' => $lots * $ticks,
             ];
-        }
-
-        $lotsMultiplier =  $multipliers[$funder]['lots']['value'];
-        $ticksMultiplier =  $multipliers[$funder]['ticks']['value'];
-
-        if ($multipliers[$funder]['lots']['multiply']) {
-            $lots = $lots * $lotsMultiplier;
-        } else {
-            $lots = $lots / $lotsMultiplier;
-        }
-
-        if ($multipliers[$funder]['ticks']['multiply']) {
-            $ticks = $ticks * $ticksMultiplier;
-            $amount = $lots * $ticks;
-        } else {
-            $ticks = $ticks / $ticksMultiplier;
-            $amount = $lots * ($ticks * 100);
-        }
-
-        return [
-            'lots' => $lots,
-            'ticks' => $ticks,
-            'amount' => $amount,
-        ];
+//        }
+//
+//        $lotsMultiplier =  $multipliers[$funder]['lots']['value'];
+//        $ticksMultiplier =  $multipliers[$funder]['ticks']['value'];
+//
+//        if ($multipliers[$funder]['lots']['multiply']) {
+//            $lots = $lots * $lotsMultiplier;
+//        } else {
+//            $lots = $lots / $lotsMultiplier;
+//        }
+//
+//        if ($multipliers[$funder]['ticks']['multiply']) {
+//            $ticks = $ticks * $ticksMultiplier;
+//            $amount = $lots * $ticks;
+//        } else {
+//            $ticks = $ticks / $ticksMultiplier;
+//            $amount = $lots * ($ticks * 100);
+//        }
+//
+//        return [
+//            'lots' => $lots,
+//            'ticks' => $ticks,
+//            'amount' => $amount,
+//        ];
     }
 
     public function divideLowestRatioLotsByTwo(&$limits, $pairLimits, $ratio): void
@@ -314,19 +314,27 @@ class PairLimitsController extends Controller
             if ($ratio[$ratioKey] === $minRatio) {
                 $lots = ($calcLimit['lots'] / 2);
 
-                $limitItem['tp'] = $this->convertToForexInputs($lots, $tpHandler, $limitItem['funder'], $limitItem['symbol']);
-                $limitItem['sl'] = $this->convertToForexInputs($lots, $slHandler, $limitItem['funder'], $limitItem['symbol']);
+//                $limitItem['tp'] = $this->convertToForexInputs($lots, $tpHandler, $limitItem['funder'], $limitItem['symbol']);
+//                $limitItem['sl'] = $this->convertToForexInputs($lots, $slHandler, $limitItem['funder'], $limitItem['symbol']);
             } else {
                 $lots = $calcLimit['lots'];
 
-                $limitItem['tp']['lots'] = $lots;
-                $limitItem['tp']['ticks'] = $tpHandler;
-                $limitItem['tp']['amount'] = $tpHandler * $lots;
-
-                $limitItem['sl']['lots'] = $lots;
-                $limitItem['sl']['ticks'] = $slHandler;
-                $limitItem['sl']['amount'] = $slHandler * $lots;
+//                $limitItem['tp']['lots'] = $lots;
+//                $limitItem['tp']['ticks'] = $tpHandler;
+//                $limitItem['tp']['amount'] = $tpHandler * $lots;
+//
+//                $limitItem['sl']['lots'] = $lots;
+//                $limitItem['sl']['ticks'] = $slHandler;
+//                $limitItem['sl']['amount'] = $slHandler * $lots;
             }
+
+            $limitItem['tp']['lots'] = $lots;
+            $limitItem['tp']['ticks'] = $tpHandler;
+            $limitItem['tp']['amount'] = $tpHandler * $lots;
+
+            $limitItem['sl']['lots'] = $lots;
+            $limitItem['sl']['ticks'] = $slHandler;
+            $limitItem['sl']['amount'] = $slHandler * $lots;
         }
     }
 
@@ -595,10 +603,9 @@ class PairLimitsController extends Controller
         }
 
         $limits = $this->equalizeTpSL($itemIds, $pairLimits, $limits);
-        $limits = $this->convertForexTpSl($itemIds, $pairLimits, $limits);
+//        $limits = $this->convertForexTpSl($itemIds, $pairLimits, $limits);
         $limits = $this->applyFunderRatio($itemIds, $pairLimits, $limits);
-
-//        $limits = $this->fixPipFAmount($limits);
+        $limits = $this->applyForexMultipliers($limits);
 
         return $limits;
     }
@@ -609,12 +616,52 @@ class PairLimitsController extends Controller
      * @param $limits
      * @return array
      */
-    public function fixPipFAmount($limits)
+    public function applyForexMultipliers($limits)
     {
+        $multipliers = TradeConfigController::get('multipliers');
+
         foreach ($limits as $id => $limitItem) {
-            if ($limitItem['funder'] === 'pipf') {
-                $limits[$id]['tp']['amount'] = $limitItem['tp']['amount'] * 100;
-                $limits[$id]['sl']['amount'] = $limitItem['sl']['amount'] * 100;
+
+            $funder = $limitItem['funder'];
+            $lots = $limitItem['tp']['lots'];
+
+            if (isset($multipliers[$funder])) {
+
+                $lotsMultiplier =  $multipliers[$funder]['lots']['value'];
+                $ticksMultiplier =  $multipliers[$funder]['ticks']['value'];
+
+                if ($multipliers[$funder]['lots']['multiply']) {
+                    $lots = $lots * $lotsMultiplier;
+                } else {
+                    $lots = $lots / $lotsMultiplier;
+                }
+
+                if ($multipliers[$funder]['ticks']['multiply']) {
+                    $tpTicks = $limitItem['tp']['ticks'] * $ticksMultiplier;
+                    $tpAmount = $lots * $tpTicks;
+
+                    $slTicks = $limitItem['sl']['ticks'] * $ticksMultiplier;
+                    $slAmount = $lots * $slTicks;
+
+                } else {
+//                    $ticks = $ticks / $ticksMultiplier;
+//                    $amount = $lots * ($ticks * 100);
+
+                    $tpTicks = $limitItem['tp']['ticks'] / $ticksMultiplier;
+                    $tpAmount = $lots * ($tpTicks * 100);
+
+                    $slTicks = $limitItem['sl']['ticks'] / $ticksMultiplier;
+                    $slAmount = $lots * ($slTicks * 100);
+
+                }
+
+                $limits[$id]['tp']['lots'] = $lots;
+                $limits[$id]['tp']['ticks'] = $tpTicks;
+                $limits[$id]['tp']['amount'] = $tpAmount;
+
+                $limits[$id]['sl']['lots'] = $lots;
+                $limits[$id]['sl']['ticks'] = $slTicks;
+                $limits[$id]['sl']['amount'] = $slAmount;
             }
         }
 
@@ -753,14 +800,6 @@ class PairLimitsController extends Controller
         if ($itemIds[0]['trading_account_credential']['package']['asset_type'] === 'forex' &&
             $itemIds[1]['trading_account_credential']['package']['asset_type'] === 'forex') {
 
-//            $item1Tp = $this->convertUnitsToLots($limits[$pairLimits[0]['id']]['tp']['amount'], $lotsEquityBracket);
-//            $generatedLots = $item1Tp['lots'];
-//
-//            $limits[$pairLimits[0]['id']]['tp'] = $item1Tp;
-//            $limits[$pairLimits[0]['id']]['sl'] = $this->convertUnitsToLots($limits[$pairLimits[0]['id']]['sl']['amount'], $lotsEquityBracket, $generatedLots);
-//            $limits[$pairLimits[1]['id']]['tp'] = $this->convertUnitsToLots($limits[$pairLimits[1]['id']]['tp']['amount'], $lotsEquityBracket, $generatedLots);
-//            $limits[$pairLimits[1]['id']]['sl'] = $this->convertUnitsToLots($limits[$pairLimits[1]['id']]['sl']['amount'], $lotsEquityBracket, $generatedLots);
-
             $lots = $limits[$pairLimits[1]['id']]['tp']['lots'];
             $item1Tp = $limits[$pairLimits[0]['id']]['tp']['ticks'];
             $item1Sl = $item1Tp + 30;
@@ -779,18 +818,18 @@ class PairLimitsController extends Controller
             $limits[$pairLimits[1]['id']]['sl']['amount'] = $item2Sl * $lots;
         }
 
-        foreach ($limits as $itemId => $limitItem) {
-            if ($limitItem['funder'] === 'pipf' || $limitItem['funder'] === 'fnxt') {
-                $newTpTick = (float) $limitItem['tp']['ticks'] / 100;
-                $newTpTick = floor($newTpTick * 100) / 100;
-
-                $newSlTick = (float) $limitItem['sl']['ticks'] / 100;
-                $newSlTick = floor($newSlTick * 100) / 100;
-
-                $limits[$itemId]['tp']['ticks'] = number_format($newTpTick, 2, '.', '');
-                $limits[$itemId]['sl']['ticks'] = number_format($newSlTick, 2, '.', '');
-            }
-        }
+//        foreach ($limits as $itemId => $limitItem) {
+//            if ($limitItem['funder'] === 'pipf' || $limitItem['funder'] === 'fnxt') {
+//                $newTpTick = (float) $limitItem['tp']['ticks'] / 100;
+//                $newTpTick = floor($newTpTick * 100) / 100;
+//
+//                $newSlTick = (float) $limitItem['sl']['ticks'] / 100;
+//                $newSlTick = floor($newSlTick * 100) / 100;
+//
+//                $limits[$itemId]['tp']['ticks'] = number_format($newTpTick, 2, '.', '');
+//                $limits[$itemId]['sl']['ticks'] = number_format($newSlTick, 2, '.', '');
+//            }
+//        }
 
         return $limits;
     }

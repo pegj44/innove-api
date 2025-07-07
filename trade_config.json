@@ -61,6 +61,16 @@
                 "multiply": false,
                 "value": 10
             }
+        },
+        "fnxt": {
+            "lots": {
+                "multiply": false,
+                "value": 10
+            },
+            "ticks": {
+                "multiply": false,
+                "value": 10
+            }
         }
     }
 }
