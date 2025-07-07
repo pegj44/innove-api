@@ -780,7 +780,7 @@ class PairLimitsController extends Controller
         }
 
         foreach ($limits as $itemId => $limitItem) {
-            if ($limitItem['funder'] === 'pipf') {
+            if ($limitItem['funder'] === 'pipf' || $limitItem['funder'] === 'fnxt') {
                 $newTpTick = (float) $limitItem['tp']['ticks'] / 100;
                 $newTpTick = floor($newTpTick * 100) / 100;
 
