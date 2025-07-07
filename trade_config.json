@@ -31,7 +31,14 @@
 
         "pipf_phase-3_pipf_phase-2": "1:4",
         "pipf_phase-3_upft_phase-3": "1:2",
-        "pipf_phase-3_gff_phase-3": "1:2"
+        "pipf_phase-3_gff_phase-3": "1:2",
+
+        "fnxt_phase-2_upft_phase-2": "1:2",
+        "fnxt_phase-2_gff_phase-2": "1:2",
+
+        "fnxt_phase-3_fnxt_phase-2": "1:4",
+        "fnxt_phase-3_upft_phase-3": "1:2",
+        "fnxt_phase-3_gff_phase-3": "1:2"
     },
     "forexSymbols": ["xauusd"],
     "multipliers": {
