@@ -62,7 +62,8 @@
             },
             "ticks": {
                 "multiply": true,
-                "value": 10
+                "value": 10,
+                "type": "points"
             }
         },
         "ftm": {
@@ -72,7 +73,8 @@
             },
             "ticks": {
                 "multiply": true,
-                "value": 10
+                "value": 10,
+                "type": "points"
             }
         },
         "pipf": {
@@ -82,7 +84,8 @@
             },
             "ticks": {
                 "multiply": false,
-                "value": 10
+                "value": 10,
+                "type": "points"
             }
         },
         "fnxt": {
@@ -92,7 +95,8 @@
             },
             "ticks": {
                 "multiply": false,
-                "value": 10
+                "value": 10,
+                "type": "value"
             }
         }
     }
