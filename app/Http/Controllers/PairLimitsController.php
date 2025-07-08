@@ -636,32 +636,45 @@ class PairLimitsController extends Controller
                     $lots = $lots / $lotsMultiplier;
                 }
 
-                if ($multipliers[$funder]['ticks']['multiply']) {
-                    $tpTicks = $limitItem['tp']['ticks'] * $ticksMultiplier;
-                    $tpAmount = $lots * $tpTicks;
+                $tpTicks = $limitItem['tp']['ticks'];
+                $slTicks = $limitItem['sl']['ticks'];
+                $tpAmount = $lots * $tpTicks;
+                $slAmount = $lots * $slTicks;
 
-                    $slTicks = $limitItem['sl']['ticks'] * $ticksMultiplier;
-                    $slAmount = $lots * $slTicks;
+                if ($multipliers[$funder]['ticks']['type'] === 'value') {
+                    $tpTicksHandler = $limitItem['tp']['ticks'] / $ticksMultiplier;
+                    $tpTicks = $lots * ($tpTicksHandler * 100);
+                    $tpAmount = $lots * ($tpTicksHandler * 100);
 
-                } else {
-//                    $ticks = $ticks / $ticksMultiplier;
-//                    $amount = $lots * ($ticks * 100);
+                    $slTicksHandler = $limitItem['sl']['ticks'] / $ticksMultiplier;
+                    $slTicks = $lots * ($slTicksHandler * 100);
+                    $slAmount = $lots * ($slTicksHandler * 100);
+                }
 
-                    $tpTicks = $limitItem['tp']['ticks'] / $ticksMultiplier;
-                    $tpAmount = $lots * ($tpTicks * 100);
+                if ($multipliers[$funder]['ticks']['type'] === 'points') {
+                    if ($multipliers[$funder]['ticks']['multiply']) {
+                        $tpTicks = $limitItem['tp']['ticks'] * $ticksMultiplier;
+                        $tpAmount = $lots * $tpTicks;
 
-                    $slTicks = $limitItem['sl']['ticks'] / $ticksMultiplier;
-                    $slAmount = $lots * ($slTicks * 100);
+                        $slTicks = $limitItem['sl']['ticks'] * $ticksMultiplier;
+                        $slAmount = $lots * $slTicks;
 
+                    } else {
+                        $tpTicks = $limitItem['tp']['ticks'] / $ticksMultiplier;
+                        $tpAmount = $lots * ($tpTicks * 100);
+
+                        $slTicks = $limitItem['sl']['ticks'] / $ticksMultiplier;
+                        $slAmount = $lots * ($slTicks * 100);
+                    }
                 }
 
                 $limits[$id]['tp']['lots'] = $lots;
-                $limits[$id]['tp']['ticks'] = $tpTicks;
-                $limits[$id]['tp']['amount'] = $tpAmount;
+                $limits[$id]['tp']['ticks'] = round($tpTicks);
+                $limits[$id]['tp']['amount'] = round($tpAmount);
 
                 $limits[$id]['sl']['lots'] = $lots;
-                $limits[$id]['sl']['ticks'] = $slTicks;
-                $limits[$id]['sl']['amount'] = $slAmount;
+                $limits[$id]['sl']['ticks'] = round($slTicks);
+                $limits[$id]['sl']['amount'] = round($slAmount);
             }
         }
 
