@@ -52,6 +52,16 @@
                 "value": 10
             }
         },
+        "ftm": {
+            "lots": {
+                "multiply": false,
+                "value": 10
+            },
+            "ticks": {
+                "multiply": true,
+                "value": 10
+            }
+        },
         "pipf": {
             "lots": {
                 "multiply": false,
