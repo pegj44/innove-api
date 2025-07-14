@@ -33,7 +33,11 @@ class ForceCloseAllTradesCommand extends Command
                     'queue_id' => $item->id,
                     'itemId' => $id,
                     'dateTime' => $currentDateTime->format('F j, Y g:i A'),
-                    'account_id' => $tradeItem['funder_account_id_long']
+                    'account_id' => $tradeItem['funder_account_id_long'],
+                    'funder' => [
+                        'alias' => $tradeItem['funder'],
+                        'theme' => $tradeItem['funder_theme']
+                    ],
                 ], 'close-position', $tradeItem['platform_type'], $tradeItem['unit_id']);
             }
 
