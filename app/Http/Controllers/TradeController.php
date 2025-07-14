@@ -159,7 +159,11 @@ class TradeController extends Controller
             'queue_id' => $queueItem->id,
             'itemId' => $matchPairId[0],
             'dateTime' => $currentDateTime->format('F j, Y g:i A'),
-            'account_id' => $matchPairData['funder_account_id_long']
+            'account_id' => $matchPairData['funder_account_id_long'],
+            'funder' => [
+                'alias' => $matchPairData['funder'],
+                'theme' => $matchPairData['funder_theme']
+            ],
         ], 'stop-trade', $matchPairData['platform_type'], $matchPairData['unit_id']);
     }
 
