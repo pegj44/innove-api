@@ -55,6 +55,9 @@ class CalculationsController extends Controller
             'calculateForexMarginLimit' => [
                 '$max_margin_allowed' => $max_margin_allowed,
                 '$margin_required_per_lot' => $margin_required_per_lot,
+                '$contract_size' => $contract_size,
+                '$current_price' => $current_price,
+                '$leverage' => $leverage,
                 '$limitConfig' => $limitConfig
             ]
         ], true));
