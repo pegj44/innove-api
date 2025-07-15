@@ -74,7 +74,10 @@ class TradeController extends Controller
         $itemId = $request->get('itemId');
         $tradeItem = TradeReport::where('id', $itemId)->first();
 
-
+        if ($tradeItem) {
+            $tradeItem->status = 'breachedcheck';
+            $tradeItem->update();
+        }
     }
 
     public function tradeErrorReport(Request $request)
