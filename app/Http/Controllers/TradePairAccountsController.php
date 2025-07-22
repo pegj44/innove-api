@@ -94,6 +94,7 @@ class TradePairAccountsController extends Controller
                         'itemId' => $itemId,
                         'type' => $type,
                         'dateTime' => $currentDateTime->format('F j, Y g:i A'),
+                        'account_id' => $pairItem['funder_account_id_long'],
                         'funder' => [
                             'alias' => $pairItem['funder'],
                             'theme' => $pairItem['funder_theme']
