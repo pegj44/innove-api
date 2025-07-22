@@ -129,6 +129,36 @@ class TradeController extends Controller
         return response()->json($queueItem);
     }
 
+    public function tradeRecovering(Request $request, string $id) : void
+    {
+        try {
+            $pairItem = TradeReport::with([
+                    'tradingAccountCredential',
+                    'tradingAccountCredential.package',
+                    'TradingAccountCredential.userAccount.tradingUnit',
+                ])
+                ->where('account_id', auth()->user()->account_id)
+                ->where('id', $id)
+                ->first();
+
+            if ($pairItem) {
+                UnitsEvent::dispatch(getUnitAuthId(), [
+                    'itemId' => $id,
+                    'account_id' => $pairItem->tradingAccountCredential->funder_account_id,
+                    'funder' => [
+                        'alias' => $pairItem->tradingAccountCredential->package->funder->alias,
+                        'theme' => $pairItem->tradingAccountCredential->package->funder->theme,
+                    ]
+                ], 'trade-recovering', $pairItem->tradingAccountCredential->package->platform_type, $pairItem->TradingAccountCredential->userAccount->tradingUnit->unit_id);
+
+            }
+        } catch (\Exception $e) {
+            info(print_r([
+                'tradeRecovering_error' => $e->getMessage()
+            ], true));
+        }
+    }
+
     /**
      * Stop trade action
      * @param Request $request
