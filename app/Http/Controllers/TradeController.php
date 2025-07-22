@@ -134,7 +134,8 @@ class TradeController extends Controller
         try {
             $pairItem = TradeReport::with([
                     'tradingAccountCredential',
-                    'tradingAccountCredential.package'
+                    'tradingAccountCredential.package',
+                    'TradingAccountCredential.userAccount.tradingUnit',
                 ])
                 ->where('account_id', auth()->user()->account_id)
                 ->where('id', $id)
