@@ -37,7 +37,7 @@ class PriceFeedController extends Controller
                     // Find the standard spread profile
                     $standardProfile = null;
                     foreach ($data[0]['spreadProfilePrices'] as $profile) {
-                        if ($profile['spreadProfile'] === 'standard') {
+                        if ($profile['spreadProfile'] === 'premium') {
                             $standardProfile = $profile;
                             break;
                         }
