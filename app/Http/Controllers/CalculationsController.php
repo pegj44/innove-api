@@ -26,6 +26,14 @@ class CalculationsController extends Controller
         return null;
     }
 
+    /**
+     * Calculate the margin limit for a given item
+     *
+     * @param $item
+     * @param $current_price
+     * @param $limitConfig
+     * @return float|null
+     */
     public static function calculateForexMarginLimit($item, $current_price, $limitConfig)
     {
         $funderAlias = strtolower($item['trading_account_credential']['package']['funder']['alias']);
