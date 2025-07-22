@@ -258,6 +258,7 @@ Route::middleware(['auth:sanctum', 'ability:unit'])->prefix('/unit/')->group(fun
         Route::post('/report/close-trade', 'closePosition');
         Route::post('/close-trade', 'closeTrade');
         Route::post('/stop-trade', 'stopTrade');
+        Route::post('trade-recovering', 'tradeRecovering');
     });
 });
 
