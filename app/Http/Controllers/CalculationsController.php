@@ -59,14 +59,6 @@ class CalculationsController extends Controller
         $position_size_per_lot = $contract_size * $current_price; // USD value per lot
         $margin_required_per_lot = $position_size_per_lot / $leverage;
 
-        info(print_r([
-            'calculateForexMarginLimit' => [
-                '$max_margin_allowed' => $max_margin_allowed,
-                '$margin_required_per_lot' => $margin_required_per_lot,
-                '$limitConfig' => $limitConfig
-            ]
-        ], true));
-
         // Max lots allowed (without exceeding cap)
         $max_lots = floor($max_margin_allowed / $margin_required_per_lot * 100) / 100; // rounded down to 2 decimals
 
