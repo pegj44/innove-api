@@ -1,4 +1,8 @@
 {
+    "pairDistance": {
+        "forex": 1,
+        "futures": 2
+    },
     "marginLimits": {
         "fpro_phase-2": {
             "limit": 62,
@@ -6,6 +10,10 @@
             "lots": 1.9
         },
         "fpro_phase-3": {
+            "limit": 29,
+            "leverage": 10
+        },
+        "fpro_phase-1": {
             "limit": 29,
             "leverage": 10
         }
