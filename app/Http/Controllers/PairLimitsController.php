@@ -504,8 +504,19 @@ class PairLimitsController extends Controller
         return $currentPrices;
     }
 
+    private function randomizeChange($num, $rand1, $rand2)
+    {
+        $randChange = (rand(0, 1) === 1) ? $rand1 : $rand2; // randomize, ex: +10 or -10
+        $num += $randChange;
+
+        return $num;
+    }
+
     public function getLimits()
     {
+        $pairDistance = TradeConfigController::get('pairDistance');
+        $pairDistance1 = (int) $pairDistance[$this->items[0]['trading_account_credential']['package']['asset_type']];
+        $pairDistance2 = (int) $pairDistance[$this->items[1]['trading_account_credential']['package']['asset_type']];
         $pairLimits = $this->getItemsLowestTpSl($this->items);
 
         if (($this->items[0]['trading_account_credential']['package']['funder']['alias'] === 'FPRO' &&
@@ -533,12 +544,13 @@ class PairLimitsController extends Controller
 
         if ($tp > $sl) { // SL based
             $calcSl = $this->getBestOrderAmountTicksRatio($sl);
+            $tp1 = $this->randomizeChange($calcSl['ticks'], 0, $pairDistance1);
 
             $limits[$pairLimits[0]['id']] = [
                 'tp' => [
-                    'ticks' => $calcSl['ticks'] - 1,
+                    'ticks' => $tp1,
                     'lots' => $calcSl['lots'],
-                    'amount' => ($calcSl['ticks'] - 1) * $calcSl['lots']
+                    'amount' => $tp1 * $calcSl['lots']
                 ],
                 'sl' => $calcSl,
                 'phase' => $pairLimits[0]['phase'],
@@ -547,18 +559,16 @@ class PairLimitsController extends Controller
                 'symbol' => strtolower($itemIds[0]['trading_account_credential']['package']['symbol']),
             ];
 
-            $projectedSl2 = ($calcSl['ticks'] + 1) * $calcSl['lots'] + $calcSl['charge'];
-
             $limits[$pairLimits[1]['id']] = [
                 'tp' => [
-                    'ticks' => $calcSl['ticks'] - 2,
+                    'ticks' => $calcSl['ticks'] - $pairDistance2,
                     'lots' => $calcSl['lots'],
-                    'amount' => ($calcSl['ticks'] - 2) * $calcSl['lots']
+                    'amount' => ($calcSl['ticks'] - $pairDistance2) * $calcSl['lots']
                 ],
                 'sl' => [
-                    'ticks' => ($pairLimits[1]['sl'] >= $projectedSl2)? $calcSl['ticks'] + 1 : $calcSl['ticks'],
+                    'ticks' => $tp1 + $pairDistance2,
                     'lots' => $calcSl['lots'],
-                    'amount' =>  ($pairLimits[1]['sl'] >= $projectedSl2)? ($calcSl['ticks'] + 1) * $calcSl['lots'] : $calcSl['ticks'] * $calcSl['lots']
+                    'amount' =>  ($tp1 + $pairDistance2) * $calcSl['lots']
                 ],
                 'phase' => $pairLimits[1]['phase'],
                 'funder' => $pairLimits[1]['funder'],
@@ -568,13 +578,14 @@ class PairLimitsController extends Controller
 
         } else { // TP based
             $calcTp = $this->getBestOrderAmountTicksRatio($tp);
+            $tp1 = $this->randomizeChange($calcTp['ticks'], $pairDistance1, -$pairDistance1);
 
             $limits[$pairLimits[0]['id']] = [
                 'tp' => $calcTp,
                 'sl' => [
-                    'ticks' => $calcTp['ticks'] + 1,
+                    'ticks' => $tp1 + $pairDistance1,
                     'lots' => $calcTp['lots'],
-                    'amount' => ($calcTp['ticks'] + 1) * $calcTp['lots']
+                    'amount' => ($tp1 + $pairDistance1) * $calcTp['lots']
                 ],
                 'phase' => $pairLimits[0]['phase'],
                 'funder' => $pairLimits[0]['funder'],
@@ -582,18 +593,16 @@ class PairLimitsController extends Controller
                 'symbol' => strtolower($itemIds[0]['trading_account_credential']['package']['symbol']),
             ];
 
-            $projectedSl2 = ($calcTp['ticks'] + 2) * $calcTp['lots'] + $calcTp['charge'];
-
             $limits[$pairLimits[1]['id']] = [
                 'tp' => [
-                    'ticks' => $calcTp['ticks'] - 1,
+                    'ticks' => $tp1,
                     'lots' => $calcTp['lots'],
-                    'amount' => ($calcTp['ticks'] - 1) * $calcTp['lots']
+                    'amount' => $tp1 * $calcTp['lots']
                 ],
                 'sl' => [
-                    'ticks' => ($pairLimits[1]['sl'] >= $projectedSl2)? $calcTp['ticks'] + 2 : $calcTp['ticks'],
+                    'ticks' => $calcTp['ticks'] + $pairDistance2,
                     'lots' => $calcTp['lots'],
-                    'amount' =>  ($pairLimits[1]['sl'] >= $projectedSl2)? ($calcTp['ticks'] + 2) * $calcTp['lots'] : $calcTp['ticks'] * $calcTp['lots']
+                    'amount' =>  ($calcTp['ticks'] + $pairDistance2) * $calcTp['lots']
                 ],
                 'phase' => $pairLimits[1]['phase'],
                 'funder' => $pairLimits[1]['funder'],
