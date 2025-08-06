@@ -274,7 +274,7 @@ class PairLimitsController extends Controller
 //        ];
     }
 
-    public function divideLowestRatioLotsByTwo(&$limits, $pairLimits, $ratio): void
+    public function divideLowestRatioLotsByTwo(&$limits, $pairLimits, $ratio, $distance1, $distance2): void
     {
         // Find the minimum ratio
         $minRatio = min($ratio);
@@ -289,13 +289,15 @@ class PairLimitsController extends Controller
             }
         }
 
+        $distance = ($distance1 === $distance2)? $distance1 : 1;
+
         $calcLimit = $this->getBestOrderAmountTicksRatio($minVal);
         $tpHandler = $calcLimit['ticks'];
-        $slHandler = $calcLimit['ticks'] + 2; // add 2 ticks of distance between sl and tp
+        $slHandler = $calcLimit['ticks'] + $distance; // add 1 tick distance between sl and tp
 
         if (($slHandler * $calcLimit['lots']) > $minVal) {
             $slHandler = $calcLimit['ticks'];
-            $tpHandler = $slHandler - 2;
+            $tpHandler = $slHandler - $distance;
         }
 
         // Find items with the lowest ratio and divide their lots by 2
@@ -338,7 +340,7 @@ class PairLimitsController extends Controller
         }
     }
 
-    public function applyFunderRatio($itemIds, $pairLimits, &$limits)
+    public function applyFunderRatio($itemIds, $pairLimits, $distance1, $distance2, &$limits)
     {
         $ratio = $this->getFunderRatio($itemIds);
 
@@ -392,7 +394,7 @@ class PairLimitsController extends Controller
 
                 if ($tpExceedsLimit || $slExceedsLimit) {
                     // Validation failed - divide lowest ratio item's tp and sl lots by 2
-                    $this->divideLowestRatioLotsByTwo($limits, $pairLimits, $ratio);
+                    $this->divideLowestRatioLotsByTwo($limits, $pairLimits, $ratio, $distance1, $distance2);
                 } else {
 
                     // Validation passed - update both tp and sl values
@@ -411,7 +413,7 @@ class PairLimitsController extends Controller
         return $limits;
     }
 
-    public function calculateFproCrossPhaseLimits($pairLimits)
+    public function calculateFproCrossPhaseLimits($pairLimits, $distance)
     {
         $stopLossAllowance = 25;
         $phase2MinAmnt = 0;
@@ -449,7 +451,7 @@ class PairLimitsController extends Controller
             $baseLimits = $this->convertUnitsToLots($baseLimits['amount'], min($equities));
 
             $slTicks = (float) $baseLimits['ticks'];
-            $tpTicks = $slTicks - 20;
+            $tpTicks = $slTicks - $distance;
             $lots = (float) $baseLimits['lots'];
             $phase3Lots = $lots / 4;
 
@@ -522,7 +524,7 @@ class PairLimitsController extends Controller
         if (($this->items[0]['trading_account_credential']['package']['funder']['alias'] === 'FPRO' &&
             $this->items[1]['trading_account_credential']['package']['funder']['alias'] === 'FPRO') &&
             $this->items[0]['trading_account_credential']['package']['current_phase'] !== $this->items[1]['trading_account_credential']['package']['current_phase']) {
-            return $this->calculateFproCrossPhaseLimits($pairLimits);
+            return $this->calculateFproCrossPhaseLimits($pairLimits, $pairDistance1);
         }
 
         $itemIds = [];
@@ -611,9 +613,9 @@ class PairLimitsController extends Controller
             ];
         }
 
-        $limits = $this->equalizeTpSL($itemIds, $pairLimits, $limits);
+        $limits = $this->equalizeTpSL($itemIds, $pairLimits, $limits, $pairDistance1, $pairDistance2);
 //        $limits = $this->convertForexTpSl($itemIds, $pairLimits, $limits);
-        $limits = $this->applyFunderRatio($itemIds, $pairLimits, $limits);
+        $limits = $this->applyFunderRatio($itemIds, $pairLimits, $pairDistance1, $pairDistance2, $limits );
         $limits = $this->applyForexMultipliers($limits);
 
         return $limits;
@@ -755,14 +757,16 @@ class PairLimitsController extends Controller
      * @param $limits
      * @return mixed
      */
-    public function equalizeTpSL($itemIds, $pairLimits, $limits)
+    public function equalizeTpSL($itemIds, $pairLimits, $limits, $pairDistance1, $pairDistance2)
     {
         if ($itemIds[0]['trading_account_credential']['package']['funder']['alias'] === $itemIds[1]['trading_account_credential']['package']['funder']['alias']) {
             return $limits;
         }
 
+        $distance = ($pairDistance1 === $pairDistance2) ? $pairDistance1 : 1;
+
         $tpTicks = $limits[$pairLimits[0]['id']]['tp']['ticks'];
-        $limits[$pairLimits[0]['id']]['sl']['ticks'] = $tpTicks + 2;
+        $limits[$pairLimits[0]['id']]['sl']['ticks'] = $tpTicks + $distance;
         $limits[$pairLimits[0]['id']]['sl']['amount'] = $limits[$pairLimits[0]['id']]['sl']['ticks'] * $limits[$pairLimits[0]['id']]['sl']['lots'];
 
         $limits[$pairLimits[1]['id']]['tp'] = $limits[$pairLimits[0]['id']]['tp'];
